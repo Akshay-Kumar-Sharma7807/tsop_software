@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../api';
 import { useConstraints } from '../context/ConstraintContext';
 import { enrichTeams, sortTeams } from '../utils/scoring';
 import SummaryBar from '../components/SummaryBar';
@@ -17,7 +17,7 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchTeams = async () => {
       try {
-        const { data } = await axios.get('/api/teams');
+        const { data } = await api.get('/api/teams');
         setTeams(data);
       } catch (err) {
         setError('Failed to load teams. Is the server running?');

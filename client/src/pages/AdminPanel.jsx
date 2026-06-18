@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../api';
 import { useConstraints } from '../context/ConstraintContext';
 
 const ADMIN_PASSWORD = 'adore2024';
@@ -258,7 +258,7 @@ export default function AdminPanel() {
 
   const fetchTeams = async () => {
     try {
-      const { data } = await axios.get('/api/teams');
+      const { data } = await api.get('/api/teams');
       setTeams(data);
     } catch (err) {
       console.error(err);
@@ -274,16 +274,16 @@ export default function AdminPanel() {
   // ── Team CRUD ──
   const saveTeam = async (form) => {
     if (teamModal && teamModal._id) {
-      await axios.put(`/api/teams/${teamModal._id}`, form);
+      await api.put(`/api/teams/${teamModal._id}`, form);
     } else {
-      await axios.post('/api/teams', form);
+      await api.post('/api/teams', form);
     }
     fetchTeams();
   };
 
   const deleteTeam = async (id) => {
     if (!confirm('Delete this team? This cannot be undone.')) return;
-    await axios.delete(`/api/teams/${id}`);
+    await api.delete(`/api/teams/${id}`);
     fetchTeams();
   };
 
@@ -291,16 +291,16 @@ export default function AdminPanel() {
   const saveMeeting = async (form) => {
     const { team, meeting } = meetingModal;
     if (meeting?._id) {
-      await axios.put(`/api/teams/${team._id}/meetings/${meeting._id}`, form);
+      await api.put(`/api/teams/${team._id}/meetings/${meeting._id}`, form);
     } else {
-      await axios.post(`/api/teams/${team._id}/meetings`, form);
+      await api.post(`/api/teams/${team._id}/meetings`, form);
     }
     fetchTeams();
   };
 
   const deleteMeeting = async (teamId, meetingId) => {
     if (!confirm('Delete this meeting?')) return;
-    await axios.delete(`/api/teams/${teamId}/meetings/${meetingId}`);
+    await api.delete(`/api/teams/${teamId}/meetings/${meetingId}`);
     fetchTeams();
   };
 

@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
+import api from '../api';
 
 const ConstraintContext = createContext(null);
 
@@ -19,7 +19,7 @@ export function ConstraintProvider({ children }) {
   useEffect(() => {
     const fetchConstraints = async () => {
       try {
-        const { data } = await axios.get('/api/constraints');
+        const { data } = await api.get('/api/constraints');
         setConstraints(data);
       } catch (err) {
         console.error('Failed to fetch constraints, using defaults:', err.message);
@@ -35,7 +35,7 @@ export function ConstraintProvider({ children }) {
     const updated = mergeDeep(constraints, patch);
     setConstraints(updated); // Optimistic update — instant re-score
     try {
-      const { data } = await axios.put('/api/constraints', patch);
+      const { data } = await api.put('/api/constraints', patch);
       setConstraints(data); // Confirm with server response
     } catch (err) {
       console.error('Failed to save constraints:', err.message);

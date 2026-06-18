@@ -6,7 +6,11 @@ const cors = require('cors');
 const app = express();
 
 // Middleware
-app.use(cors());
+// Allow all origins (tighten to your Netlify URL in production if needed)
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+}));
 app.use(express.json());
 
 // Routes
