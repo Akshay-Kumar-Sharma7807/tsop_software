@@ -1,0 +1,132 @@
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from 'recharts';
+
+function StatusPill({ value }) {
+  if (!value) return <span className="text-surface-400 text-xs">—</span>;
+  const cfg = {
+    yes: { cls: 'bg-green-100 text-green-700', label: 'Yes' },
+    no: { cls: 'bg-red-100 text-red-700', label: 'No' },
+    'in progress': { cls: 'bg-amber-100 text-amber-700', label: 'In Prog.' },
+  };
+  const { cls, label } = cfg[value] || cfg.no;
+  return (
+    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${cls}`}>{label}</span>
+  );
+}
+
+export default function MeetingHistory({ meetings, teamName }) {
+  if (!meetings || meetings.length === 0) {
+    return (
+      <p className="text-sm text-surface-400 py-4 text-center">No meeting history available.</p>
+    );
+  }
+
+  // Sort by date ascending for chart
+  const sorted = [...meetings].sort((a, b) => new Date(a.date) - new Date(b.date));
+
+  const chartData = sorted.map((m) => ({
+    date: new Date(m.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }),
+    'Sessions Done': m.sessionsDone,
+    'Total Goal': m.totalGoal,
+  }));
+
+  return (
+    <div className="mt-4">
+      <h4 className="text-sm font-semibold text-surface-700 mb-3">
+        Session Progress — {teamName}
+      </h4>
+
+      {/* Line Chart */}
+      <div className="h-48 mb-4">
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={chartData} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+            <XAxis
+              dataKey="date"
+              tick={{ fontSize: 11, fill: '#64748b' }}
+              axisLine={{ stroke: '#e2e8f0' }}
+              tickLine={false}
+            />
+            <YAxis
+              tick={{ fontSize: 11, fill: '#64748b' }}
+              axisLine={false}
+              tickLine={false}
+            />
+            <Tooltip
+              contentStyle={{
+                borderRadius: '8px',
+                border: '1px solid #e2e8f0',
+                fontSize: 12,
+                boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+              }}
+            />
+            <Legend wrapperStyle={{ fontSize: 12, paddingTop: '8px' }} />
+            <Line
+              type="monotone"
+              dataKey="Sessions Done"
+              stroke="#334155"
+              strokeWidth={2}
+              dot={{ r: 4, fill: '#334155' }}
+              activeDot={{ r: 5 }}
+            />
+            <Line
+              type="monotone"
+              dataKey="Total Goal"
+              stroke="#94a3b8"
+              strokeWidth={2}
+              strokeDasharray="5 5"
+              dot={{ r: 4, fill: '#94a3b8' }}
+              activeDot={{ r: 5 }}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* History Table */}
+      <div className="overflow-x-auto rounded-lg border border-surface-200">
+        <table className="w-full text-sm">
+          <thead className="bg-surface-50">
+            <tr>
+              {['Date', 'Members', 'TM', 'DM', 'ADM', 'Done', 'Goal', 'New'].map((h) => (
+                <th
+                  key={h}
+                  className="text-left px-3 py-2 text-xs font-semibold text-surface-500 uppercase tracking-wide whitespace-nowrap"
+                >
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-surface-100">
+            {sorted.map((m, i) => (
+              <tr key={m._id || i} className="hover:bg-surface-50 transition-colors">
+                <td className="px-3 py-2 text-surface-700 whitespace-nowrap text-xs">
+                  {new Date(m.date).toLocaleDateString('en-IN', {
+                    day: '2-digit', month: 'short', year: '2-digit',
+                  })}
+                </td>
+                <td className="px-3 py-2 text-surface-700 text-center">{m.members ?? '—'}</td>
+                <td className="px-3 py-2"><StatusPill value={m.tm} /></td>
+                <td className="px-3 py-2"><StatusPill value={m.dm} /></td>
+                <td className="px-3 py-2"><StatusPill value={m.adm} /></td>
+                <td className="px-3 py-2 font-semibold text-surface-800 text-center">{m.sessionsDone}</td>
+                <td className="px-3 py-2 text-surface-500 text-center">{m.totalGoal}</td>
+                <td className="px-3 py-2 text-center">
+                  <span className="font-medium text-surface-700">+{m.newMembers ?? 0}</span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}

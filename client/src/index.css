@@ -1,0 +1,73 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    @apply bg-surface-50 text-surface-800 font-sans antialiased;
+    min-height: 100vh;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold text-surface-900;
+  }
+}
+
+@layer components {
+  /* Priority border variants */
+  .border-priority-red    { @apply border-l-4 border-l-red-500; }
+  .border-priority-amber  { @apply border-l-4 border-l-amber-500; }
+  .border-priority-green  { @apply border-l-4 border-l-green-500; }
+
+  /* TM/DM/ADM badge variants */
+  .badge-yes       { @apply bg-green-100 text-green-800 border border-green-200; }
+  .badge-no        { @apply bg-red-100 text-red-800 border border-red-200; }
+  .badge-progress  { @apply bg-amber-100 text-amber-800 border border-amber-200; }
+
+  /* Card base */
+  .card {
+    @apply bg-white rounded-xl border border-surface-200 shadow-sm transition-shadow hover:shadow-md;
+  }
+
+  /* Input / select base */
+  .input {
+    @apply w-full px-3 py-2 text-sm border border-surface-300 rounded-lg
+           bg-white text-surface-800 placeholder-surface-400
+           focus:outline-none focus:ring-2 focus:ring-surface-400 focus:border-transparent
+           transition-all;
+  }
+
+  /* Button variants */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium
+           rounded-lg transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-1;
+  }
+  .btn-primary {
+    @apply btn bg-surface-800 text-white hover:bg-surface-700 focus:ring-surface-600;
+  }
+  .btn-secondary {
+    @apply btn bg-surface-100 text-surface-700 hover:bg-surface-200 focus:ring-surface-300;
+  }
+  .btn-danger {
+    @apply btn bg-red-600 text-white hover:bg-red-700 focus:ring-red-400;
+  }
+  .btn-ghost {
+    @apply btn bg-transparent text-surface-600 hover:bg-surface-100 focus:ring-surface-200;
+  }
+}
+
+/* Smooth accordion animation */
+.accordion-content {
+  overflow: hidden;
+  transition: max-height 0.35s ease, opacity 0.25s ease;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #f1f5f9; }
+::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #64748b; }
