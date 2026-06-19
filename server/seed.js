@@ -146,8 +146,37 @@ async function seed() {
     await Constraints.deleteMany({});
     console.log('🗑️  Cleared existing data');
 
+    // Process teams to match the updated schema
+    const processedTeamsData = teamsData.map((t, idx) => {
+      const domains = ['Sunshine', 'HR', 'GM', 'Tech', 'GD', 'SMM'];
+      const domain = domains[idx % domains.length];
+      
+      const meetings = t.meetings.map(m => {
+        const hasTac = !!t.tac;
+        const { newMembers, ...mRest } = m;
+        return {
+          ...mRest,
+          time: '18:00',
+          tac: hasTac ? 'yes' : 'no',
+          tacName: t.tac || '',
+          tmName: m.tm === 'yes' ? `${t.name} TM` : '',
+          dmName: m.dm === 'yes' ? `${t.name} DM` : '',
+          admName: m.adm === 'yes' ? `${t.name} ADM` : '',
+          totalMembers: m.members,
+          memberNames: Array.from({ length: m.members }).map((_, i) => `${t.name} Present ${i + 1}`),
+          totalMemberNames: Array.from({ length: m.members }).map((_, i) => `${t.name} Member ${i + 1}`)
+        };
+      });
+
+      return {
+        name: t.name,
+        domain,
+        meetings
+      };
+    });
+
     // Seed teams
-    const inserted = await Team.insertMany(teamsData);
+    const inserted = await Team.insertMany(processedTeamsData);
     console.log(`✅ Seeded ${inserted.length} teams`);
 
     // Seed constraints

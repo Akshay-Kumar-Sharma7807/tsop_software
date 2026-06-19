@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api';
-import { useConstraints } from '../context/ConstraintContext';
 
 const ADMIN_PASSWORD = 'adore2024';
 
@@ -38,12 +37,29 @@ const STATUS_OPTIONS = [
   { value: 'no', label: 'No' },
   { value: 'in progress', label: 'In Progress' },
 ];
+const TAC_OPTIONS = [
+  { value: 'no', label: 'No' },
+  { value: 'yes', label: 'Yes' },
+];
+const DOMAIN_OPTIONS = [
+  '', 'Sunshine', 'HR', 'GM', 'Tech', 'GD', 'SMM',
+];
 
-const EMPTY_TEAM = { name: '', tac: '', domain: '' };
-const EMPTY_MEETING = {
-  date: '', tm: 'no', dm: 'no', adm: 'no',
-  members: '', totalGoal: '', sessionsDone: '', newMembers: '', centerFeedbackMeetings: '',
+const todayISO = () => new Date().toISOString().slice(0, 10);
+const currentTimeISO = () => {
+  const d = new Date();
+  const hours = String(d.getHours()).padStart(2, '0');
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+  return `${hours}:${minutes}`;
 };
+
+const EMPTY_TEAM = { name: '', domain: '' };
+const getFreshMeeting = () => ({
+  date: todayISO(), time: currentTimeISO(), tm: 'no', tmName: '', dm: 'no', dmName: '', adm: 'no', admName: '',
+  tac: 'no', tacName: '',
+  members: 1, totalMembers: 1, memberNames: [''], totalMemberNames: [''],
+  totalGoal: '', sessionsDone: '', centerFeedbackMeetings: '',
+});
 
 // ─── Password Gate ────────────────────────────────────────────────
 function PasswordGate({ onUnlock }) {
@@ -92,7 +108,7 @@ function PasswordGate({ onUnlock }) {
 // ─── Team Form Modal ──────────────────────────────────────────────
 function TeamModal({ team, onClose, onSave }) {
   const [form, setForm] = useState(
-    team ? { name: team.name, tac: team.tac, domain: team.domain || '' } : EMPTY_TEAM
+    team ? { name: team.name, domain: team.domain || '' } : { ...EMPTY_TEAM }
   );
   const [saving, setSaving] = useState(false);
 
@@ -115,8 +131,20 @@ function TeamModal({ team, onClose, onSave }) {
         </h2>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <Field id="team-name" label="Team Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
-          <Field id="team-tac" label="TAC Name" value={form.tac} onChange={(e) => setForm({ ...form, tac: e.target.value })} />
-          <Field id="team-domain" label="Domain" placeholder="e.g. Education, Health…" value={form.domain} onChange={(e) => setForm({ ...form, domain: e.target.value })} />
+          {/* Domain — dropdown */}
+          <div>
+            <label htmlFor="team-domain" className="block text-xs font-semibold text-surface-600 mb-1">Domain</label>
+            <select
+              id="team-domain"
+              value={form.domain}
+              onChange={(e) => setForm({ ...form, domain: e.target.value })}
+              className="input"
+            >
+              {DOMAIN_OPTIONS.map((d) => (
+                <option key={d} value={d}>{d || '— Select domain —'}</option>
+              ))}
+            </select>
+          </div>
           <div className="flex gap-2 pt-2">
             <button type="button" onClick={onClose} className="btn-secondary flex-1">Cancel</button>
             <button type="submit" disabled={saving} className="btn-primary flex-1">
@@ -131,10 +159,43 @@ function TeamModal({ team, onClose, onSave }) {
 
 // ─── Meeting Form Modal ───────────────────────────────────────────
 function MeetingModal({ meeting, teamName, onClose, onSave }) {
-  const [form, setForm] = useState(meeting ? { ...meeting } : { ...EMPTY_MEETING });
+  const [form, setForm] = useState(
+    meeting ? {
+      ...getFreshMeeting(),
+      ...meeting,
+      memberNames: meeting.memberNames || [],
+      totalMemberNames: meeting.totalMemberNames || [],
+    } : getFreshMeeting()
+  );
   const [saving, setSaving] = useState(false);
 
   const f = (key) => (e) => setForm({ ...form, [key]: e.target.value });
+
+  // Present Member count/name helpers
+  const setPresentMembersCount = (count) => {
+    const n = Math.max(0, Number(count));
+    const names = [...(form.memberNames || [])];
+    while (names.length < n) names.push('');
+    setForm({ ...form, members: count, memberNames: names.slice(0, n) });
+  };
+  const setPresentMemberName = (i, val) => {
+    const names = [...(form.memberNames || [])];
+    names[i] = val;
+    setForm({ ...form, memberNames: names });
+  };
+
+  // Total Team Member count/name helpers
+  const setTotalMembersCount = (count) => {
+    const n = Math.max(0, Number(count));
+    const names = [...(form.totalMemberNames || [])];
+    while (names.length < n) names.push('');
+    setForm({ ...form, totalMembers: count, totalMemberNames: names.slice(0, n) });
+  };
+  const setTotalMemberName = (i, val) => {
+    const names = [...(form.totalMemberNames || [])];
+    names[i] = val;
+    setForm({ ...form, totalMemberNames: names });
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -143,9 +204,9 @@ function MeetingModal({ meeting, teamName, onClose, onSave }) {
       await onSave({
         ...form,
         members: Number(form.members),
+        totalMembers: Number(form.totalMembers),
         totalGoal: Number(form.totalGoal),
         sessionsDone: Number(form.sessionsDone),
-        newMembers: Number(form.newMembers),
         centerFeedbackMeetings: Number(form.centerFeedbackMeetings),
       });
       onClose();
@@ -155,91 +216,138 @@ function MeetingModal({ meeting, teamName, onClose, onSave }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4 py-8 overflow-y-auto">
-      <div className="card w-full max-w-lg p-6">
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4 py-6">
+      <div className="card w-full max-w-lg p-6 max-h-[90vh] flex flex-col">
         <h2 className="text-lg font-bold text-surface-900 mb-1">
           {meeting ? 'Edit Meeting' : 'Add Meeting'}
         </h2>
-        <p className="text-sm text-surface-500 mb-4">Team: <strong>{teamName}</strong></p>
-        <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-4">
-          <div className="col-span-2">
+        <p className="text-sm text-surface-500 mb-3">Team: <strong>{teamName}</strong></p>
+        <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0">
+          <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-4 mb-4">
+
+          {/* Date and Time */}
+          <div className="grid grid-cols-2 gap-3">
             <Field id="m-date" label="Date" type="date" value={form.date?.slice(0, 10) || ''} onChange={f('date')} required />
+            <Field id="m-time" label="Time" type="time" value={form.time || ''} onChange={f('time')} required />
           </div>
-          <SelectField id="m-tm" label="TM" value={form.tm} onChange={f('tm')} options={STATUS_OPTIONS} />
-          <SelectField id="m-dm" label="DM" value={form.dm} onChange={f('dm')} options={STATUS_OPTIONS} />
-          <SelectField id="m-adm" label="ADM" value={form.adm} onChange={f('adm')} options={STATUS_OPTIONS} />
-          <Field id="m-members" label="Members Present" type="number" min={0} value={form.members} onChange={f('members')} />
-          <Field id="m-goal" label="Total Goal" type="number" min={0} value={form.totalGoal} onChange={f('totalGoal')} required />
-          <Field id="m-done" label="Sessions Done" type="number" min={0} value={form.sessionsDone} onChange={f('sessionsDone')} />
-          <Field id="m-new" label="New Members" type="number" min={0} value={form.newMembers} onChange={f('newMembers')} />
-          <Field id="m-cfm" label="Center Feedback Meetings" type="number" min={0} value={form.centerFeedbackMeetings} onChange={f('centerFeedbackMeetings')} />
-          <div className="col-span-2 flex gap-2 pt-2">
+
+          {/* Attendance and Names */}
+          <div className="flex flex-col gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <SelectField id="m-tm" label="TM Status" value={form.tm} onChange={f('tm')} options={STATUS_OPTIONS} />
+              {form.tm === 'yes' && (
+                <Field id="m-tm-name" label="TM Name" placeholder="Enter TM name" value={form.tmName} onChange={f('tmName')} />
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <SelectField id="m-dm" label="DM Status" value={form.dm} onChange={f('dm')} options={STATUS_OPTIONS} />
+              {form.dm === 'yes' && (
+                <Field id="m-dm-name" label="DM Name" placeholder="Enter DM name" value={form.dmName} onChange={f('dmName')} />
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <SelectField id="m-adm" label="ADM Status" value={form.adm} onChange={f('adm')} options={STATUS_OPTIONS} />
+              {form.adm === 'yes' && (
+                <Field id="m-adm-name" label="ADM Name" placeholder="Enter ADM name" value={form.admName} onChange={f('admName')} />
+              )}
+            </div>
+          </div>
+
+          {/* TAC yes/no + name */}
+          <div className="flex flex-col gap-2">
+            <SelectField id="m-tac" label="TAC Present" value={form.tac} onChange={f('tac')} options={TAC_OPTIONS} />
+            {form.tac === 'yes' && (
+              <Field id="m-tac-name" label="TAC Name" placeholder="Enter TAC name" value={form.tacName} onChange={f('tacName')} />
+            )}
+          </div>
+
+          {/* Members Present & Total Team Members */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label htmlFor="m-members" className="block text-xs font-semibold text-surface-600 mb-1">
+                Members Present
+              </label>
+              <input
+                id="m-members"
+                type="number" min={1}
+                value={form.members}
+                onChange={(e) => setPresentMembersCount(e.target.value)}
+                className="input"
+                required
+              />
+            </div>
+            <div>
+              <label htmlFor="m-total-members" className="block text-xs font-semibold text-surface-600 mb-1">
+                Total Team Members
+              </label>
+              <input
+                id="m-total-members"
+                type="number" min={1}
+                value={form.totalMembers}
+                onChange={(e) => setTotalMembersCount(e.target.value)}
+                className="input"
+                required
+              />
+            </div>
+          </div>
+
+          {/* Present Member Names */}
+          {Number(form.members) > 0 && (
+            <div className="flex flex-col gap-2 border border-green-100 bg-green-50/20 p-3 rounded-lg">
+              <p className="text-xs font-semibold text-green-700">Present Member Names</p>
+              <div className="grid grid-cols-2 gap-2">
+                {Array.from({ length: Number(form.members) }).map((_, i) => (
+                  <input
+                    key={i}
+                    id={`m-present-name-${i}`}
+                    type="text"
+                    placeholder={`Present Member ${i + 1}`}
+                    value={form.memberNames?.[i] || ''}
+                    onChange={(e) => setPresentMemberName(i, e.target.value)}
+                    className="input text-sm bg-white"
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Total Member Names */}
+          {Number(form.totalMembers) > 0 && (
+            <div className="flex flex-col gap-2 border border-surface-200 bg-surface-50/30 p-3 rounded-lg">
+              <p className="text-xs font-semibold text-surface-700">All Team Member Names</p>
+              <div className="grid grid-cols-2 gap-2">
+                {Array.from({ length: Number(form.totalMembers) }).map((_, i) => (
+                  <input
+                    key={i}
+                    id={`m-total-name-${i}`}
+                    type="text"
+                    placeholder={`Team Member ${i + 1}`}
+                    value={form.totalMemberNames?.[i] || ''}
+                    onChange={(e) => setTotalMemberName(i, e.target.value)}
+                    className="input text-sm bg-white"
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Stats row */}
+          <div className="grid grid-cols-3 gap-3">
+            <Field id="m-goal" label="Total Goal" type="number" min={0} value={form.totalGoal} onChange={f('totalGoal')} required />
+            <Field id="m-done" label="Sessions Done" type="number" min={0} value={form.sessionsDone} onChange={f('sessionsDone')} />
+            <Field id="m-cfm" label="Center Feedback Meetings" type="number" min={0} value={form.centerFeedbackMeetings} onChange={f('centerFeedbackMeetings')} />
+          </div>
+
+          </div>
+          <div className="flex gap-2 pt-3 border-t border-surface-150">
             <button type="button" onClick={onClose} className="btn-secondary flex-1">Cancel</button>
             <button type="submit" disabled={saving} className="btn-primary flex-1">
               {saving ? 'Saving…' : 'Save'}
             </button>
           </div>
         </form>
-      </div>
-    </div>
-  );
-}
-
-// ─── Constraint Admin Section ─────────────────────────────────────
-function ConstraintAdmin() {
-  const { constraints, updateConstraints } = useConstraints();
-
-  const t = (path, key, value) => updateConstraints({ [path]: { [key]: value } });
-
-  const rows = [
-    { id: 'adm-min-pct', path: 'minCompletionPct', label: 'Min Completion %', hasValue: true, min: 0, max: 100, step: 5 },
-    { id: 'adm-tm', path: 'tmRequired', label: 'TM Attendance Required', hasValue: false },
-    { id: 'adm-dm', path: 'dmRequired', label: 'DM (Deputy Manager) Required', hasValue: false },
-    { id: 'adm-adm', path: 'admRequired', label: 'ADM (Asst. Deputy Manager) Required', hasValue: false },
-    { id: 'adm-members', path: 'minNewMembers', label: 'Min New Members', hasValue: true, min: 0, max: 10, step: 1 },
-  ];
-
-  return (
-    <div className="card p-6">
-      <h2 className="text-lg font-bold text-surface-900 mb-4">Constraint Settings</h2>
-      <div className="divide-y divide-surface-100">
-        {rows.map(({ id, path, label, hasValue, min, max, step }) => {
-          const item = constraints[path] || {};
-          return (
-            <div key={path} className="py-4 flex items-center justify-between gap-6">
-              <div className="flex-1">
-                <p className="text-sm font-semibold text-surface-800">{label}</p>
-                {hasValue && (
-                  <div className="flex items-center gap-3 mt-2">
-                    <input
-                      type="range" min={min} max={max} step={step}
-                      value={item.value ?? 0}
-                      disabled={!item.enabled}
-                      onChange={(e) => t(path, 'value', Number(e.target.value))}
-                      className="w-40 accent-surface-700 disabled:opacity-40"
-                      aria-label={`${label} value`}
-                    />
-                    <span className="text-sm font-semibold text-surface-700">
-                      {item.value ?? 0}{path === 'minCompletionPct' ? '%' : ''}
-                    </span>
-                  </div>
-                )}
-              </div>
-              <button
-                id={id}
-                role="switch"
-                aria-checked={item.enabled}
-                onClick={() => t(path, 'enabled', !item.enabled)}
-                className={`relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent
-                  transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-surface-500
-                  ${item.enabled ? 'bg-surface-700' : 'bg-surface-300'}`}
-              >
-                <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow
-                  transition duration-200 ${item.enabled ? 'translate-x-5' : 'translate-x-0'}`} />
-              </button>
-            </div>
-          );
-        })}
       </div>
     </div>
   );
@@ -327,9 +435,6 @@ export default function AdminPanel() {
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 flex flex-col gap-6">
         <h1 className="text-2xl font-bold text-surface-900">Admin Panel</h1>
 
-        {/* Constraints Section */}
-        <ConstraintAdmin />
-
         {/* Teams Section */}
         <div className="card p-6">
           <div className="flex items-center justify-between mb-4">
@@ -355,7 +460,6 @@ export default function AdminPanel() {
                   <div className="flex items-center justify-between px-4 py-3 bg-surface-50">
                     <div>
                       <span className="font-semibold text-surface-900">{team.name}</span>
-                      {team.tac && <span className="text-sm text-surface-500 ml-2">TAC: {team.tac}</span>}
                       {team.domain && (
                         <span className="text-xs bg-surface-100 text-surface-600 border border-surface-200 px-2 py-0.5 rounded-full ml-2">
                           {team.domain}
@@ -410,7 +514,7 @@ export default function AdminPanel() {
                           <table className="w-full text-sm">
                             <thead className="bg-surface-50">
                               <tr>
-                                {['Date', 'TM', 'DM', 'ADM', 'Members', 'Done', 'Goal', 'New', ''].map((h) => (
+                                {['Date', 'TM', 'DM', 'ADM', 'TAC', 'Members', 'Done', 'Goal', ''].map((h) => (
                                   <th key={h} className="text-left px-3 py-2 text-xs font-semibold text-surface-500 uppercase tracking-wide whitespace-nowrap">
                                     {h}
                                   </th>
@@ -422,14 +526,48 @@ export default function AdminPanel() {
                                 .sort((a, b) => new Date(b.date) - new Date(a.date))
                                 .map((m) => (
                                   <tr key={m._id} className="hover:bg-surface-50">
-                                    <td className="px-3 py-2 text-xs whitespace-nowrap">{m.date?.slice(0, 10)}</td>
-                                    <td className="px-3 py-2 text-xs">{m.tm}</td>
-                                    <td className="px-3 py-2 text-xs">{m.dm}</td>
-                                    <td className="px-3 py-2 text-xs">{m.adm}</td>
-                                    <td className="px-3 py-2 text-xs text-center">{m.members ?? '—'}</td>
+                                    <td className="px-3 py-2 text-xs whitespace-nowrap">
+                                      <div>{m.date?.slice(0, 10)}</div>
+                                      {m.time && (
+                                        <div className="text-[10px] text-surface-400 font-normal mt-0.5">{m.time}</div>
+                                      )}
+                                    </td>
+                                    <td className="px-3 py-2 text-xs">
+                                      {m.tm}
+                                      {m.tm === 'yes' && m.tmName && (
+                                        <span className="block text-[10px] text-surface-400 font-normal">{m.tmName}</span>
+                                      )}
+                                    </td>
+                                    <td className="px-3 py-2 text-xs">
+                                      {m.dm}
+                                      {m.dm === 'yes' && m.dmName && (
+                                        <span className="block text-[10px] text-surface-400 font-normal">{m.dmName}</span>
+                                      )}
+                                    </td>
+                                    <td className="px-3 py-2 text-xs">
+                                      {m.adm}
+                                      {m.adm === 'yes' && m.admName && (
+                                        <span className="block text-[10px] text-surface-400 font-normal">{m.admName}</span>
+                                      )}
+                                    </td>
+                                    <td className="px-3 py-2 text-xs">
+                                      {m.tac === 'yes' ? `✓ ${m.tacName || ''}` : '✗'}
+                                    </td>
+                                    <td className="px-3 py-2 text-xs">
+                                      <div className="font-semibold text-center">{m.members ?? '—'} / {m.totalMembers ?? '—'}</div>
+                                      {m.memberNames?.length > 0 && (
+                                        <span className="block text-[10px] text-surface-400 font-normal max-w-[120px] truncate" title={`Present: ${m.memberNames.filter(Boolean).join(', ')}`}>
+                                          Pres: {m.memberNames.filter(Boolean).join(', ')}
+                                        </span>
+                                      )}
+                                      {m.totalMemberNames?.length > 0 && (
+                                        <span className="block text-[10px] text-surface-400 font-normal max-w-[120px] truncate" title={`All: ${m.totalMemberNames.filter(Boolean).join(', ')}`}>
+                                          All: {m.totalMemberNames.filter(Boolean).join(', ')}
+                                        </span>
+                                      )}
+                                    </td>
                                     <td className="px-3 py-2 text-xs text-center font-semibold">{m.sessionsDone}</td>
                                     <td className="px-3 py-2 text-xs text-center">{m.totalGoal}</td>
-                                    <td className="px-3 py-2 text-xs text-center">+{m.newMembers ?? 0}</td>
                                     <td className="px-3 py-2">
                                       <div className="flex gap-1">
                                         <button

@@ -10,7 +10,6 @@ export default function ConstraintPanel() {
   const [open, setOpen] = useState(false);
 
   // Local slider state — keeps UI snappy while dragging
-  const [localPct, setLocalPct] = useState(null);
   const [localMembers, setLocalMembers] = useState(null);
 
   const toggleEnabled = (path, value) => {
@@ -24,11 +23,9 @@ export default function ConstraintPanel() {
 
   if (loading) return null;
 
-  const activePct   = localPct     ?? constraints.minCompletionPct?.value ?? 30;
   const activeMembers = localMembers ?? constraints.minTotalMembers?.value ?? 5;
 
   const activeCount = [
-    constraints.minCompletionPct?.enabled,
     constraints.tmRequired?.enabled,
     constraints.dmRequired?.enabled,
     constraints.admRequired?.enabled,
@@ -49,7 +46,7 @@ export default function ConstraintPanel() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
               d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
           </svg>
-          <span className="font-semibold text-surface-800">Priority Constraints</span>
+          <span className="font-semibold text-surface-800">Constraints</span>
           <span className="text-xs bg-surface-100 text-surface-500 px-2 py-0.5 rounded-full">
             {activeCount} active
           </span>
@@ -68,35 +65,6 @@ export default function ConstraintPanel() {
         style={{ maxHeight: open ? '600px' : '0px', opacity: open ? 1 : 0 }}
       >
         <div className="px-5 pb-5 pt-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 border-t border-surface-100">
-
-          {/* Min Completion % */}
-          <ConstraintRow
-            id="constraint-completion"
-            label="Min Completion %"
-            description="Flag teams below this threshold"
-            enabled={constraints.minCompletionPct?.enabled}
-            onToggle={(v) => toggleEnabled('minCompletionPct', v)}
-          >
-            <div className="flex items-center gap-3 mt-3">
-              <input
-                type="range" min={0} max={100} step={5}
-                value={activePct}
-                disabled={!constraints.minCompletionPct?.enabled}
-                onChange={(e) => setLocalPct(Number(e.target.value))}
-                onPointerUp={(e) => {
-                  const v = Number(e.target.value);
-                  setLocalPct(null);
-                  commitSlider('minCompletionPct', v);
-                }}
-                className="flex-1 h-2 rounded-full cursor-pointer disabled:opacity-40
-                           accent-surface-700"
-                aria-label="Min completion percent"
-              />
-              <span className="text-sm font-bold text-surface-800 w-12 text-right tabular-nums">
-                {activePct}%
-              </span>
-            </div>
-          </ConstraintRow>
 
           {/* TM Required */}
           <ConstraintRow

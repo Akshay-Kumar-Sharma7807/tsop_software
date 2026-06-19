@@ -16,7 +16,6 @@ export default function SummaryBar({ teams }) {
     { label: 'Critical', value: red, color: 'text-red-700', bg: 'bg-red-50', border: 'border-red-200' },
     { label: 'Needs Attention', value: amber, color: 'text-amber-700', bg: 'bg-amber-50', border: 'border-amber-200' },
     { label: 'On Track', value: green, color: 'text-green-700', bg: 'bg-green-50', border: 'border-green-200' },
-    { label: 'Avg Completion', value: `${avgPct}%`, color: 'text-surface-700', bg: 'bg-surface-100' },
   ];
 
   return (

@@ -5,30 +5,24 @@ const COLOR_STYLES = {
   red: {
     border: 'border-l-red-500',
     dot: 'bg-red-500',
-    pctColor: 'text-red-600',
     headerBg: 'hover:bg-red-50',
     expandedBg: 'bg-red-50/40',
-    bar: 'bg-red-400',
   },
   amber: {
     border: 'border-l-amber-500',
     dot: 'bg-amber-400',
-    pctColor: 'text-amber-600',
     headerBg: 'hover:bg-amber-50',
     expandedBg: 'bg-amber-50/40',
-    bar: 'bg-amber-400',
   },
   green: {
     border: 'border-l-green-500',
     dot: 'bg-green-500',
-    pctColor: 'text-green-600',
     headerBg: 'hover:bg-green-50',
     expandedBg: 'bg-green-50/30',
-    bar: 'bg-green-500',
   },
 };
 
-function StatusBadge({ label, value }) {
+function StatusBadge({ label, value, name }) {
   const cls = {
     yes: 'bg-green-100 text-green-700 border-green-200',
     no: 'bg-red-100 text-red-700 border-red-200',
@@ -38,16 +32,20 @@ function StatusBadge({ label, value }) {
   const icon = { yes: '✓', no: '✗', 'in progress': '~' }[value] || '✗';
 
   return (
-    <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border font-medium ${cls}`}>
+    <span 
+      className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border font-medium ${cls}`}
+      title={name ? `${label}: ${name}` : undefined}
+    >
       <span className="font-bold">{label}</span>
       <span>{icon}</span>
+      {value === 'yes' && name && <span className="text-[10px] opacity-75 font-normal">({name})</span>}
     </span>
   );
 }
 
 export default function TeamCard({ team }) {
   const [expanded, setExpanded] = useState(false);
-  const { color, failedConstraints, pct, latest } = team;
+  const { color, failedConstraints, latest } = team;
   const styles = COLOR_STYLES[color] || COLOR_STYLES.green;
 
   return (
@@ -68,8 +66,8 @@ export default function TeamCard({ team }) {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="font-semibold text-surface-900 text-sm">{team.name}</span>
-            {team.tac && (
-              <span className="text-xs text-surface-400">TAC: {team.tac}</span>
+            {latest?.tac === 'yes' && latest?.tacName && (
+              <span className="text-xs text-surface-400">TAC: {latest.tacName}</span>
             )}
             {team.domain && (
               <span className="text-xs bg-surface-100 text-surface-500 px-2 py-0.5 rounded-full border border-surface-200">
@@ -79,25 +77,17 @@ export default function TeamCard({ team }) {
           </div>
         </div>
 
-        {/* Progress bar (compact) */}
-        <div className="hidden sm:flex flex-col gap-1 w-36 flex-shrink-0">
-          <div className="flex justify-between text-xs text-surface-400">
-            <span>{latest?.sessionsDone ?? 0}/{latest?.totalGoal ?? 0}</span>
-          </div>
-          <div className="h-1.5 bg-surface-200 rounded-full overflow-hidden">
-            <div
-              className={`h-full ${styles.bar} rounded-full`}
-              style={{ width: `${Math.min(pct, 100)}%` }}
-            />
-          </div>
+        {/* Sessions done / goal */}
+        <div className="hidden sm:flex items-center text-xs text-surface-400 flex-shrink-0">
+          <span>{latest?.sessionsDone ?? 0}/{latest?.totalGoal ?? 0} sessions</span>
         </div>
 
         {/* TM / DM / ADM badges */}
         {latest && (
           <div className="hidden md:flex items-center gap-1.5 flex-shrink-0">
-            <StatusBadge label="TM" value={latest.tm} />
-            <StatusBadge label="DM" value={latest.dm} />
-            <StatusBadge label="ADM" value={latest.adm} />
+            <StatusBadge label="TM" value={latest.tm} name={latest.tmName} />
+            <StatusBadge label="DM" value={latest.dm} name={latest.dmName} />
+            <StatusBadge label="ADM" value={latest.adm} name={latest.admName} />
           </div>
         )}
 
@@ -118,10 +108,6 @@ export default function TeamCard({ team }) {
           </div>
         )}
 
-        {/* Completion % */}
-        <span className={`text-base font-extrabold flex-shrink-0 w-14 text-right ${styles.pctColor}`}>
-          {pct.toFixed(1)}%
-        </span>
 
         {/* Chevron */}
         <svg
@@ -141,19 +127,33 @@ export default function TeamCard({ team }) {
             {/* TM/DM/ADM (always visible on expand) */}
             {latest && (
               <div className="flex items-center gap-1.5 flex-wrap">
-                <StatusBadge label="TM" value={latest.tm} />
-                <StatusBadge label="DM" value={latest.dm} />
-                <StatusBadge label="ADM" value={latest.adm} />
+                <StatusBadge label="TM" value={latest.tm} name={latest.tmName} />
+                <StatusBadge label="DM" value={latest.dm} name={latest.dmName} />
+                <StatusBadge label="ADM" value={latest.adm} name={latest.admName} />
               </div>
             )}
 
             {/* Members */}
             {latest && (
-              <div className="flex items-center gap-3 text-sm text-surface-600 ml-auto">
-                <span>
+              <div className="flex flex-col items-end gap-1.5 ml-auto text-right text-xs">
+                <div>
                   <span className="font-semibold text-surface-800">{latest.members ?? '—'}</span>
-                  <span className="text-xs text-surface-400 ml-1">members</span>
-                </span>
+                  <span className="text-surface-400 ml-1 font-medium">present</span>
+                  {latest.memberNames && latest.memberNames.filter(Boolean).length > 0 && (
+                    <span className="text-surface-500 block max-w-xs truncate" title={latest.memberNames.filter(Boolean).join(', ')}>
+                      ({latest.memberNames.filter(Boolean).join(', ')})
+                    </span>
+                  )}
+                </div>
+                <div>
+                  <span className="font-semibold text-surface-800">{latest.totalMembers ?? '—'}</span>
+                  <span className="text-surface-400 ml-1 font-medium">total team size</span>
+                  {latest.totalMemberNames && latest.totalMemberNames.filter(Boolean).length > 0 && (
+                    <span className="text-surface-500 block max-w-xs truncate" title={latest.totalMemberNames.filter(Boolean).join(', ')}>
+                      ({latest.totalMemberNames.filter(Boolean).join(', ')})
+                    </span>
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -172,19 +172,10 @@ export default function TeamCard({ team }) {
             </div>
           )}
 
-          {/* Progress bar (full width on expand) */}
+          {/* Sessions summary */}
           {latest && (
-            <div className="mb-4">
-              <div className="flex justify-between text-xs text-surface-500 mb-1.5">
-                <span>{latest.sessionsDone} sessions done</span>
-                <span>Goal: {latest.totalGoal}</span>
-              </div>
-              <div className="h-2.5 bg-surface-200 rounded-full overflow-hidden">
-                <div
-                  className={`h-full ${styles.bar} rounded-full transition-all duration-500`}
-                  style={{ width: `${Math.min(pct, 100)}%` }}
-                />
-              </div>
+            <div className="text-xs text-surface-500 mb-4">
+              {latest.sessionsDone} sessions done · Goal: {latest.totalGoal}
             </div>
           )}
 

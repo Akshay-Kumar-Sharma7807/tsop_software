@@ -1,14 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api';
-import { useConstraints } from '../context/ConstraintContext';
 import { enrichTeams, sortTeams } from '../utils/scoring';
 import SummaryBar from '../components/SummaryBar';
-import ConstraintPanel from '../components/ConstraintPanel';
 import TeamCard from '../components/TeamCard';
 
 export default function Dashboard() {
-  const { constraints, loading: constraintsLoading } = useConstraints();
+  const constraints = {};
   const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -61,7 +59,7 @@ export default function Dashboard() {
         </div>
 
         {/* Loading / Error */}
-        {(loading || constraintsLoading) && (
+        {loading && (
           <div className="flex items-center justify-center py-24">
             <div className="animate-spin w-8 h-8 border-4 border-surface-200 border-t-surface-700 rounded-full" />
           </div>
@@ -73,13 +71,10 @@ export default function Dashboard() {
           </div>
         )}
 
-        {!loading && !constraintsLoading && !error && (
+        {!loading && !error && (
           <>
             {/* Summary Bar */}
             <SummaryBar teams={scoredTeams} />
-
-            {/* Constraint Accordion */}
-            <ConstraintPanel />
 
             {/* Team Accordion List */}
             {scoredTeams.length === 0 ? (
