@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api';
+import MeetingDetailsModal from '../components/MeetingDetailsModal';
 
 const ADMIN_PASSWORD = 'adore2024';
 
@@ -363,6 +364,7 @@ export default function AdminPanel() {
   // Modals
   const [teamModal, setTeamModal] = useState(null); // null | 'add' | team object
   const [meetingModal, setMeetingModal] = useState(null); // null | { team, meeting? }
+  const [selectedDetails, setSelectedDetails] = useState(null);
 
   const fetchTeams = async () => {
     try {
@@ -525,7 +527,11 @@ export default function AdminPanel() {
                               {[...team.meetings]
                                 .sort((a, b) => new Date(b.date) - new Date(a.date))
                                 .map((m) => (
-                                  <tr key={m._id} className="hover:bg-surface-50">
+                                  <tr 
+                                    key={m._id} 
+                                    onClick={() => setSelectedDetails({ meeting: m, teamName: team.name })}
+                                    className="hover:bg-surface-100 transition-colors cursor-pointer"
+                                  >
                                     <td className="px-3 py-2 text-xs whitespace-nowrap">
                                       <div>{m.date?.slice(0, 10)}</div>
                                       {m.time && (
@@ -572,14 +578,20 @@ export default function AdminPanel() {
                                       <div className="flex gap-1">
                                         <button
                                           id={`edit-m-${m._id}`}
-                                          onClick={() => setMeetingModal({ team, meeting: m })}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setMeetingModal({ team, meeting: m });
+                                          }}
                                           className="btn-ghost text-xs px-2 py-0.5"
                                         >
                                           Edit
                                         </button>
                                         <button
                                           id={`del-m-${m._id}`}
-                                          onClick={() => deleteMeeting(team._id, m._id)}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            deleteMeeting(team._id, m._id);
+                                          }}
                                           className="text-xs text-red-600 hover:text-red-800 px-2 py-0.5"
                                         >
                                           Del
@@ -616,6 +628,13 @@ export default function AdminPanel() {
           teamName={meetingModal.team.name}
           onClose={() => setMeetingModal(null)}
           onSave={saveMeeting}
+        />
+      )}
+      {selectedDetails && (
+        <MeetingDetailsModal
+          meeting={selectedDetails.meeting}
+          teamName={selectedDetails.teamName}
+          onClose={() => setSelectedDetails(null)}
         />
       )}
     </div>
