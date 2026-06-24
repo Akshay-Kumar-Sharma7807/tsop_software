@@ -161,7 +161,7 @@ function TeamModal({ team, onClose, onSave }) {
 }
 
 // ─── Meeting Form Modal ───────────────────────────────────────────
-function MeetingModal({ meeting, team, teamName, onClose, onSave }) {
+export function MeetingModal({ meeting, team, teamName, onClose, onSave }) {
   // If creating a new meeting, grab the previous meeting for autofill
   const previousMeeting = !meeting && team?.meetings?.length > 0
     ? team.meetings[team.meetings.length - 1]
