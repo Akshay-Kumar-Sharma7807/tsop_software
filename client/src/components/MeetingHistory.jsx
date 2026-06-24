@@ -1,5 +1,3 @@
-import { useState } from 'react';
-import MeetingDetailsModal from './MeetingDetailsModal';
 import {
   LineChart,
   Line,
@@ -32,7 +30,6 @@ function StatusPill({ value, label, name }) {
 }
 
 export default function MeetingHistory({ meetings, teamName }) {
-  const [selectedMeeting, setSelectedMeeting] = useState(null);
   if (!meetings || meetings.length === 0) {
     return (
       <p className="text-sm text-surface-400 py-4 text-center">No meeting history available.</p>
@@ -117,11 +114,7 @@ export default function MeetingHistory({ meetings, teamName }) {
           </thead>
           <tbody className="divide-y divide-surface-100">
             {sorted.map((m, i) => (
-              <tr 
-                key={m._id || i} 
-                onClick={() => setSelectedMeeting(m)}
-                className="hover:bg-surface-100 transition-colors cursor-pointer"
-              >
+              <tr key={m._id || i} className="hover:bg-surface-50 transition-colors">
                 <td className="px-3 py-2 text-surface-700 whitespace-nowrap text-xs">
                   <div>
                     {new Date(m.date).toLocaleDateString('en-IN', {
@@ -155,14 +148,6 @@ export default function MeetingHistory({ meetings, teamName }) {
           </tbody>
         </table>
       </div>
-
-      {selectedMeeting && (
-        <MeetingDetailsModal 
-          meeting={selectedMeeting} 
-          teamName={teamName} 
-          onClose={() => setSelectedMeeting(null)} 
-        />
-      )}
     </div>
   );
 }

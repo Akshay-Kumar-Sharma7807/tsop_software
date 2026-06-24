@@ -185,7 +185,7 @@ function MeetingModal({ meeting, team, teamName, onClose, onSave }) {
         dm: previousMeeting.dm, dmName: previousMeeting.dmName,
         adm: previousMeeting.adm, admName: previousMeeting.admName,
         tac: previousMeeting.tac, tacName: previousMeeting.tacName,
-        members: previousMeeting.members ?? '', 
+        members: previousMeeting.members ?? '',
         totalMembers: previousMeeting.totalMembers ?? '',
         memberNames: previousMeeting.memberNames || [],
         totalMemberNames: previousMeeting.totalMemberNames || [],
@@ -273,125 +273,125 @@ function MeetingModal({ meeting, team, teamName, onClose, onSave }) {
         <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0">
           <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-4 mb-4">
 
-          {/* Date and Time */}
-          <div className="grid grid-cols-2 gap-3">
-            <Field id="m-date" label="Date" type="date" value={form.date?.slice(0, 10) || ''} onChange={f('date')} required />
-            <Field id="m-time" label="Time" type="time" value={form.time || ''} onChange={f('time')} required />
-          </div>
+            {/* Date and Time */}
+            <div className="grid grid-cols-2 gap-3">
+              <Field id="m-date" label="Date" type="date" value={form.date?.slice(0, 10) || ''} onChange={f('date')} required />
+              <Field id="m-time" label="Time" type="time" value={form.time || ''} onChange={f('time')} required />
+            </div>
 
-          {/* Attendance and Names */}
-          <div className="flex flex-col gap-3">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <SelectField id="m-tm" label="TM Status" value={form.tm} onChange={f('tm')} options={STATUS_OPTIONS} />
-              {form.tm === 'yes' && (
-                <Field id="m-tm-name" label="TM Name" placeholder="Enter TM name" value={form.tmName} onChange={f('tmName')} />
+            {/* Attendance and Names */}
+            <div className="flex flex-col gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <SelectField id="m-tm" label="TM Status" value={form.tm} onChange={f('tm')} options={STATUS_OPTIONS} />
+                {form.tm === 'yes' && (
+                  <Field id="m-tm-name" label="TM Name" placeholder="Enter TM name" value={form.tmName} onChange={f('tmName')} />
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <SelectField id="m-dm" label="DM Status" value={form.dm} onChange={f('dm')} options={STATUS_OPTIONS} />
+                {form.dm === 'yes' && (
+                  <Field id="m-dm-name" label="DM Name" placeholder="Enter DM name" value={form.dmName} onChange={f('dmName')} />
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <SelectField id="m-adm" label="ADM Status" value={form.adm} onChange={f('adm')} options={STATUS_OPTIONS} />
+                {form.adm === 'yes' && (
+                  <Field id="m-adm-name" label="ADM Name" placeholder="Enter ADM name" value={form.admName} onChange={f('admName')} />
+                )}
+              </div>
+            </div>
+
+            {/* TAC yes/no + name */}
+            <div className="flex flex-col gap-2">
+              <SelectField id="m-tac" label="TAC Present" value={form.tac} onChange={f('tac')} options={TAC_OPTIONS} />
+              {form.tac === 'yes' && (
+                <Field id="m-tac-name" label="TAC Name" placeholder="Enter TAC name" value={form.tacName} onChange={f('tacName')} />
               )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <SelectField id="m-dm" label="DM Status" value={form.dm} onChange={f('dm')} options={STATUS_OPTIONS} />
-              {form.dm === 'yes' && (
-                <Field id="m-dm-name" label="DM Name" placeholder="Enter DM name" value={form.dmName} onChange={f('dmName')} />
-              )}
+            {/* Members Present & Total Team Members */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label htmlFor="m-members" className="block text-xs font-semibold text-surface-600 mb-1">
+                  Members Present
+                </label>
+                <input
+                  id="m-members"
+                  type="number" min={1}
+                  value={form.members}
+                  onChange={(e) => setPresentMembersCount(e.target.value)}
+                  className="input"
+                  required
+                />
+              </div>
+              <div>
+                <label htmlFor="m-total-members" className="block text-xs font-semibold text-surface-600 mb-1">
+                  Total Team Members
+                </label>
+                <input
+                  id="m-total-members"
+                  type="number" min={1}
+                  value={form.totalMembers}
+                  onChange={(e) => setTotalMembersCount(e.target.value)}
+                  className="input"
+                  required
+                />
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <SelectField id="m-adm" label="ADM Status" value={form.adm} onChange={f('adm')} options={STATUS_OPTIONS} />
-              {form.adm === 'yes' && (
-                <Field id="m-adm-name" label="ADM Name" placeholder="Enter ADM name" value={form.admName} onChange={f('admName')} />
-              )}
-            </div>
-          </div>
-
-          {/* TAC yes/no + name */}
-          <div className="flex flex-col gap-2">
-            <SelectField id="m-tac" label="TAC Present" value={form.tac} onChange={f('tac')} options={TAC_OPTIONS} />
-            {form.tac === 'yes' && (
-              <Field id="m-tac-name" label="TAC Name" placeholder="Enter TAC name" value={form.tacName} onChange={f('tacName')} />
+            {/* Present Member Names */}
+            {Number(form.members) > 0 && (
+              <div className="flex flex-col gap-2 border border-green-100 bg-green-50/20 p-3 rounded-lg">
+                <p className="text-xs font-semibold text-green-700">Present Member Names</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {Array.from({ length: Number(form.members) }).map((_, i) => (
+                    <input
+                      key={i}
+                      id={`m-present-name-${i}`}
+                      type="text"
+                      placeholder={`Present Member ${i + 1}`}
+                      value={form.memberNames?.[i] || ''}
+                      onChange={(e) => setPresentMemberName(i, e.target.value)}
+                      className="input text-sm bg-white"
+                    />
+                  ))}
+                </div>
+              </div>
             )}
-          </div>
 
-          {/* Members Present & Total Team Members */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label htmlFor="m-members" className="block text-xs font-semibold text-surface-600 mb-1">
-                Members Present
-              </label>
-              <input
-                id="m-members"
-                type="number" min={1}
-                value={form.members}
-                onChange={(e) => setPresentMembersCount(e.target.value)}
-                className="input"
-                required
-              />
-            </div>
-            <div>
-              <label htmlFor="m-total-members" className="block text-xs font-semibold text-surface-600 mb-1">
-                Total Team Members
-              </label>
-              <input
-                id="m-total-members"
-                type="number" min={1}
-                value={form.totalMembers}
-                onChange={(e) => setTotalMembersCount(e.target.value)}
-                className="input"
-                required
-              />
-            </div>
-          </div>
-
-          {/* Present Member Names */}
-          {Number(form.members) > 0 && (
-            <div className="flex flex-col gap-2 border border-green-100 bg-green-50/20 p-3 rounded-lg">
-              <p className="text-xs font-semibold text-green-700">Present Member Names</p>
-              <div className="grid grid-cols-2 gap-2">
-                {Array.from({ length: Number(form.members) }).map((_, i) => (
-                  <input
-                    key={i}
-                    id={`m-present-name-${i}`}
-                    type="text"
-                    placeholder={`Present Member ${i + 1}`}
-                    value={form.memberNames?.[i] || ''}
-                    onChange={(e) => setPresentMemberName(i, e.target.value)}
-                    className="input text-sm bg-white"
-                  />
-                ))}
+            {/* Total Member Names */}
+            {Number(form.totalMembers) > 0 && (
+              <div className="flex flex-col gap-2 border border-surface-200 bg-surface-50/30 p-3 rounded-lg">
+                <p className="text-xs font-semibold text-surface-700">All Team Member Names</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {Array.from({ length: Number(form.totalMembers) }).map((_, i) => (
+                    <input
+                      key={i}
+                      id={`m-total-name-${i}`}
+                      type="text"
+                      placeholder={`Team Member ${i + 1}`}
+                      value={form.totalMemberNames?.[i] || ''}
+                      onChange={(e) => setTotalMemberName(i, e.target.value)}
+                      className="input text-sm bg-white"
+                    />
+                  ))}
+                </div>
               </div>
+            )}
+
+            {/* Stats row */}
+            <div className="grid grid-cols-3 gap-3">
+              <Field id="m-goal" label="Total Goal" type="number" min={0} value={form.totalGoal} onChange={f('totalGoal')} required />
+              <Field id="m-done" label="Sessions Done" type="number" min={0} value={form.sessionsDone} onChange={f('sessionsDone')} />
+              <Field id="m-cfm" label="Center Feedback Meetings" type="number" min={0} value={form.centerFeedbackMeetings} onChange={f('centerFeedbackMeetings')} />
             </div>
-          )}
 
-          {/* Total Member Names */}
-          {Number(form.totalMembers) > 0 && (
-            <div className="flex flex-col gap-2 border border-surface-200 bg-surface-50/30 p-3 rounded-lg">
-              <p className="text-xs font-semibold text-surface-700">All Team Member Names</p>
-              <div className="grid grid-cols-2 gap-2">
-                {Array.from({ length: Number(form.totalMembers) }).map((_, i) => (
-                  <input
-                    key={i}
-                    id={`m-total-name-${i}`}
-                    type="text"
-                    placeholder={`Team Member ${i + 1}`}
-                    value={form.totalMemberNames?.[i] || ''}
-                    onChange={(e) => setTotalMemberName(i, e.target.value)}
-                    className="input text-sm bg-white"
-                  />
-                ))}
-              </div>
+            {/* ── Global Parameters ── */}
+            <div className="border-t border-surface-200 pt-4">
+              <ParameterFormSection values={paramValues} onChange={handleParamChange} />
             </div>
-          )}
-
-          {/* Stats row */}
-          <div className="grid grid-cols-3 gap-3">
-            <Field id="m-goal" label="Total Goal" type="number" min={0} value={form.totalGoal} onChange={f('totalGoal')} required />
-            <Field id="m-done" label="Sessions Done" type="number" min={0} value={form.sessionsDone} onChange={f('sessionsDone')} />
-            <Field id="m-cfm" label="Center Feedback Meetings" type="number" min={0} value={form.centerFeedbackMeetings} onChange={f('centerFeedbackMeetings')} />
-          </div>
-
-          {/* ── Global Parameters ── */}
-          <div className="border-t border-surface-200 pt-4">
-            <ParameterFormSection values={paramValues} onChange={handleParamChange} />
-          </div>
 
           </div>
           <div className="flex gap-2 pt-3 border-t border-surface-150">
@@ -545,13 +545,12 @@ export default function AdminPanel() {
 
         {/* Tab bar */}
         <div className="flex gap-1 p-1 bg-surface-100 rounded-xl w-fit">
-          {[['teams','🏃 Teams'],['parameters','⚙️ Parameters']].map(([key, label]) => (
+          {[['teams', '🏃 Teams'], ['parameters', '⚙️ Parameters']].map(([key, label]) => (
             <button
               key={key}
               onClick={() => setActiveTab(key)}
-              className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${
-                activeTab === key ? 'bg-white text-surface-900 shadow-sm' : 'text-surface-500 hover:text-surface-700'
-              }`}
+              className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${activeTab === key ? 'bg-white text-surface-900 shadow-sm' : 'text-surface-500 hover:text-surface-700'
+                }`}
             >{label}</button>
           ))}
         </div>
@@ -590,8 +589,8 @@ export default function AdminPanel() {
             <div className="flex gap-3 flex-wrap">
               {[
                 { label: 'Total', val: params.length, cls: 'bg-surface-100 text-surface-700' },
-                { label: 'Enabled', val: params.filter(p=>p.enabled).length, cls: 'bg-green-100 text-green-700' },
-                { label: 'Disabled', val: params.filter(p=>!p.enabled).length, cls: 'bg-red-100 text-red-700' },
+                { label: 'Enabled', val: params.filter(p => p.enabled).length, cls: 'bg-green-100 text-green-700' },
+                { label: 'Disabled', val: params.filter(p => !p.enabled).length, cls: 'bg-red-100 text-red-700' },
               ].map(({ label, val, cls }) => (
                 <span key={label} className={`text-xs px-3 py-1 rounded-full font-semibold ${cls}`}>{label}: {val}</span>
               ))}
@@ -599,24 +598,23 @@ export default function AdminPanel() {
 
             {/* Parameter list */}
             {paramsLoading ? (
-              <div className="flex justify-center py-8"><div className="animate-spin w-6 h-6 border-4 border-surface-200 border-t-surface-700 rounded-full"/></div>
+              <div className="flex justify-center py-8"><div className="animate-spin w-6 h-6 border-4 border-surface-200 border-t-surface-700 rounded-full" /></div>
             ) : filteredParams.length === 0 ? (
               <p className="text-sm text-surface-400 text-center py-8">No parameters found. {params.length === 0 ? 'Run the seed script to add default parameters.' : 'Try a different filter.'}</p>
             ) : (
               <div className="flex flex-col gap-2">
                 {filteredParams.map(p => (
                   <div key={p._id} className={`flex items-center gap-3 px-4 py-3 rounded-xl border transition-all ${p.enabled ? 'bg-white border-surface-200' : 'bg-surface-50 border-surface-150 opacity-60'}`}>
-                    <div className={`w-2 h-2 rounded-full flex-shrink-0 ${p.enabled ? 'bg-green-500' : 'bg-surface-300'}`}/>
+                    <div className={`w-2 h-2 rounded-full flex-shrink-0 ${p.enabled ? 'bg-green-500' : 'bg-surface-300'}`} />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-semibold text-surface-800 truncate">{p.name}</span>
                         {p.required && <span className="text-[10px] text-red-600 font-bold">*</span>}
-                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
-                          p.dataType === 'yesno' ? 'bg-blue-100 text-blue-700' :
-                          p.dataType === 'number' ? 'bg-purple-100 text-purple-700' :
-                          p.dataType === 'url' ? 'bg-amber-100 text-amber-700' :
-                          'bg-surface-100 text-surface-600'
-                        }`}>{p.dataType}</span>
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${p.dataType === 'yesno' ? 'bg-blue-100 text-blue-700' :
+                            p.dataType === 'number' ? 'bg-purple-100 text-purple-700' :
+                              p.dataType === 'url' ? 'bg-amber-100 text-amber-700' :
+                                'bg-surface-100 text-surface-600'
+                          }`}>{p.dataType}</span>
                       </div>
                       <div className="flex items-center gap-2 mt-0.5">
                         <span className="text-[10px] text-surface-400">{p.category}</span>
@@ -626,9 +624,8 @@ export default function AdminPanel() {
                     <div className="flex items-center gap-1.5 flex-shrink-0">
                       <button
                         onClick={() => toggleParam(p)}
-                        className={`text-xs px-2.5 py-1 rounded-lg font-semibold border transition-all ${
-                          p.enabled ? 'border-green-200 bg-green-50 text-green-700 hover:bg-green-100' : 'border-surface-200 bg-white text-surface-500 hover:bg-surface-100'
-                        }`}
+                        className={`text-xs px-2.5 py-1 rounded-lg font-semibold border transition-all ${p.enabled ? 'border-green-200 bg-green-50 text-green-700 hover:bg-green-100' : 'border-surface-200 bg-white text-surface-500 hover:bg-surface-100'
+                          }`}
                       >{p.enabled ? 'ON' : 'OFF'}</button>
                       <button id={`edit-param-${p._id}`} onClick={() => setParamModal(p)} className="btn-ghost text-xs px-2 py-1">Edit</button>
                       <button id={`del-param-${p._id}`} onClick={() => deleteParam(p._id)} className="text-xs text-red-500 hover:text-red-700 px-2 py-1">Del</button>
@@ -642,182 +639,177 @@ export default function AdminPanel() {
 
         {/* ══ TEAMS TAB ══ */}
         {activeTab === 'teams' && (
-        <>{/* Teams Section */}
-        <div className="card p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold text-surface-900">Teams ({teams.length})</h2>
-            <button
-              id="add-team-btn"
-              onClick={() => setTeamModal('add')}
-              className="btn-primary text-sm"
-            >
-              + Add Team
-            </button>
-          </div>
+          <>{/* Teams Section */}
+            <div className="card p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-bold text-surface-900">Teams ({teams.length})</h2>
+                <button
+                  id="add-team-btn"
+                  onClick={() => setTeamModal('add')}
+                  className="btn-primary text-sm"
+                >
+                  + Add Team
+                </button>
+              </div>
 
-          {loading ? (
-            <div className="flex justify-center py-8">
-              <div className="animate-spin w-6 h-6 border-4 border-surface-200 border-t-surface-700 rounded-full" />
-            </div>
-          ) : (
-            <div className="flex flex-col gap-4">
-              {teams.map((team) => (
-                <div key={team._id} className="border border-surface-200 rounded-xl overflow-hidden">
-                  {/* Team Row */}
-                  <div className="flex items-center justify-between px-4 py-3 bg-surface-50">
-                    <div>
-                      <span className="font-semibold text-surface-900">{team.name}</span>
-                      {team.domain && (
-                        <span className="text-xs bg-surface-100 text-surface-600 border border-surface-200 px-2 py-0.5 rounded-full ml-2">
-                          {team.domain}
-                        </span>
-                      )}
-                      <span className="text-xs bg-surface-200 text-surface-600 px-2 py-0.5 rounded-full ml-2">
-                        {team.meetings?.length ?? 0} meetings
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        id={`toggle-team-${team._id}`}
-                        onClick={() => setExpandedTeam(expandedTeam === team._id ? null : team._id)}
-                        className="btn-ghost text-xs"
-                      >
-                        {expandedTeam === team._id ? '▲ Hide' : '▼ Meetings'}
-                      </button>
-                      <button
-                        id={`edit-team-${team._id}`}
-                        onClick={() => setTeamModal(team)}
-                        className="btn-secondary text-xs"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        id={`delete-team-${team._id}`}
-                        onClick={() => deleteTeam(team._id)}
-                        className="btn-danger text-xs"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Meetings table */}
-                  {expandedTeam === team._id && (
-                    <div className="px-4 pb-4 pt-2 border-t border-surface-100">
-                      <div className="flex justify-between items-center mb-2">
-                        <p className="text-xs font-semibold text-surface-600 uppercase tracking-wide">Meetings</p>
-                        <button
-                          id={`add-meeting-${team._id}`}
-                          onClick={() => setMeetingModal({ team })}
-                          className="btn-secondary text-xs"
-                        >
-                          + Add Meeting
-                        </button>
+              {loading ? (
+                <div className="flex justify-center py-8">
+                  <div className="animate-spin w-6 h-6 border-4 border-surface-200 border-t-surface-700 rounded-full" />
+                </div>
+              ) : (
+                <div className="flex flex-col gap-4">
+                  {teams.map((team) => (
+                    <div key={team._id} className="border border-surface-200 rounded-xl overflow-hidden">
+                      {/* Team Row */}
+                      <div className="flex items-center justify-between px-4 py-3 bg-surface-50">
+                        <div>
+                          <Link
+                            to={`/admin/teams/${team._id}`}
+                            className="font-semibold text-surface-900 hover:underline"
+                          >
+                            {team.name}
+                          </Link>
+                          {team.domain && (
+                            <span className="text-xs bg-surface-100 text-surface-600 border border-surface-200 px-2 py-0.5 rounded-full ml-2">
+                              {team.domain}
+                            </span>
+                          )}
+                          <span className="text-xs bg-surface-200 text-surface-600 px-2 py-0.5 rounded-full ml-2">
+                            {team.meetings?.length ?? 0} meetings
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            id={`toggle-team-${team._id}`}
+                            onClick={() => setExpandedTeam(expandedTeam === team._id ? null : team._id)}
+                            className="btn-ghost text-xs"
+                          >
+                            {expandedTeam === team._id ? '▲ Hide' : '▼ Meetings'}
+                          </button>
+                          <button
+                            id={`edit-team-${team._id}`}
+                            onClick={() => setTeamModal(team)}
+                            className="btn-secondary text-xs"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            id={`delete-team-${team._id}`}
+                            onClick={() => deleteTeam(team._id)}
+                            className="btn-danger text-xs"
+                          >
+                            Delete
+                          </button>
+                        </div>
                       </div>
-                      {(!team.meetings || team.meetings.length === 0) ? (
-                        <p className="text-sm text-surface-400 py-2">No meetings yet.</p>
-                      ) : (
-                        <div className="overflow-x-auto rounded-lg border border-surface-200">
-                          <table className="w-full text-sm">
-                            <thead className="bg-surface-50">
-                              <tr>
-                                {['Date', 'TM', 'DM', 'ADM', 'TAC', 'Members', 'Done', 'Goal', ''].map((h) => (
-                                  <th key={h} className="text-left px-3 py-2 text-xs font-semibold text-surface-500 uppercase tracking-wide whitespace-nowrap">
-                                    {h}
-                                  </th>
-                                ))}
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-surface-100">
-                              {[...team.meetings]
-                                .sort((a, b) => new Date(b.date) - new Date(a.date))
-                                .map((m) => (
-                                  <tr 
-                                    key={m._id} 
-                                    onClick={() => setSelectedDetails({ meeting: m, teamName: team.name })}
-                                    className="hover:bg-surface-100 transition-colors cursor-pointer"
-                                  >
-                                    <td className="px-3 py-2 text-xs whitespace-nowrap">
-                                      <div>{m.date?.slice(0, 10)}</div>
-                                      {m.time && (
-                                        <div className="text-[10px] text-surface-400 font-normal mt-0.5">{m.time}</div>
-                                      )}
-                                    </td>
-                                    <td className="px-3 py-2 text-xs">
-                                      {m.tm}
-                                      {m.tm === 'yes' && m.tmName && (
-                                        <span className="block text-[10px] text-surface-400 font-normal">{m.tmName}</span>
-                                      )}
-                                    </td>
-                                    <td className="px-3 py-2 text-xs">
-                                      {m.dm}
-                                      {m.dm === 'yes' && m.dmName && (
-                                        <span className="block text-[10px] text-surface-400 font-normal">{m.dmName}</span>
-                                      )}
-                                    </td>
-                                    <td className="px-3 py-2 text-xs">
-                                      {m.adm}
-                                      {m.adm === 'yes' && m.admName && (
-                                        <span className="block text-[10px] text-surface-400 font-normal">{m.admName}</span>
-                                      )}
-                                    </td>
-                                    <td className="px-3 py-2 text-xs">
-                                      {m.tac === 'yes' ? `✓ ${m.tacName || ''}` : '✗'}
-                                    </td>
-                                    <td className="px-3 py-2 text-xs">
-                                      <div className="font-semibold text-center">{m.members ?? '—'} / {m.totalMembers ?? '—'}</div>
-                                      {m.memberNames?.length > 0 && (
-                                        <span className="block text-[10px] text-surface-400 font-normal max-w-[120px] truncate" title={`Present: ${m.memberNames.filter(Boolean).join(', ')}`}>
-                                          Pres: {m.memberNames.filter(Boolean).join(', ')}
-                                        </span>
-                                      )}
-                                      {m.totalMemberNames?.length > 0 && (
-                                        <span className="block text-[10px] text-surface-400 font-normal max-w-[120px] truncate" title={`All: ${m.totalMemberNames.filter(Boolean).join(', ')}`}>
-                                          All: {m.totalMemberNames.filter(Boolean).join(', ')}
-                                        </span>
-                                      )}
-                                    </td>
-                                    <td className="px-3 py-2 text-xs text-center font-semibold">{m.sessionsDone}</td>
-                                    <td className="px-3 py-2 text-xs text-center">{m.totalGoal}</td>
-                                    <td className="px-3 py-2">
-                                      <div className="flex gap-1">
-                                        <button
-                                          id={`edit-m-${m._id}`}
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            setMeetingModal({ team, meeting: m });
-                                          }}
-                                          className="btn-ghost text-xs px-2 py-0.5"
-                                        >
-                                          Edit
-                                        </button>
-                                        <button
-                                          id={`del-m-${m._id}`}
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            deleteMeeting(team._id, m._id);
-                                          }}
-                                          className="text-xs text-red-600 hover:text-red-800 px-2 py-0.5"
-                                        >
-                                          Del
-                                        </button>
-                                      </div>
-                                    </td>
+
+                      {/* Meetings table */}
+                      {expandedTeam === team._id && (
+                        <div className="px-4 pb-4 pt-2 border-t border-surface-100">
+                          <div className="flex justify-between items-center mb-2">
+                            <p className="text-xs font-semibold text-surface-600 uppercase tracking-wide">Meetings</p>
+                            <button
+                              id={`add-meeting-${team._id}`}
+                              onClick={() => setMeetingModal({ team })}
+                              className="btn-secondary text-xs"
+                            >
+                              + Add Meeting
+                            </button>
+                          </div>
+                          {(!team.meetings || team.meetings.length === 0) ? (
+                            <p className="text-sm text-surface-400 py-2">No meetings yet.</p>
+                          ) : (
+                            <div className="overflow-x-auto rounded-lg border border-surface-200">
+                              <table className="w-full text-sm">
+                                <thead className="bg-surface-50">
+                                  <tr>
+                                    {['Date', 'TM', 'DM', 'ADM', 'TAC', 'Members', 'Done', 'Goal', ''].map((h) => (
+                                      <th key={h} className="text-left px-3 py-2 text-xs font-semibold text-surface-500 uppercase tracking-wide whitespace-nowrap">
+                                        {h}
+                                      </th>
+                                    ))}
                                   </tr>
-                                ))}
-                            </tbody>
-                          </table>
+                                </thead>
+                                <tbody className="divide-y divide-surface-100">
+                                  {[...team.meetings]
+                                    .sort((a, b) => new Date(b.date) - new Date(a.date))
+                                    .map((m) => (
+                                      <tr key={m._id} className="hover:bg-surface-50">
+                                        <td className="px-3 py-2 text-xs whitespace-nowrap">
+                                          <div>{m.date?.slice(0, 10)}</div>
+                                          {m.time && (
+                                            <div className="text-[10px] text-surface-400 font-normal mt-0.5">{m.time}</div>
+                                          )}
+                                        </td>
+                                        <td className="px-3 py-2 text-xs">
+                                          {m.tm}
+                                          {m.tm === 'yes' && m.tmName && (
+                                            <span className="block text-[10px] text-surface-400 font-normal">{m.tmName}</span>
+                                          )}
+                                        </td>
+                                        <td className="px-3 py-2 text-xs">
+                                          {m.dm}
+                                          {m.dm === 'yes' && m.dmName && (
+                                            <span className="block text-[10px] text-surface-400 font-normal">{m.dmName}</span>
+                                          )}
+                                        </td>
+                                        <td className="px-3 py-2 text-xs">
+                                          {m.adm}
+                                          {m.adm === 'yes' && m.admName && (
+                                            <span className="block text-[10px] text-surface-400 font-normal">{m.admName}</span>
+                                          )}
+                                        </td>
+                                        <td className="px-3 py-2 text-xs">
+                                          {m.tac === 'yes' ? `✓ ${m.tacName || ''}` : '✗'}
+                                        </td>
+                                        <td className="px-3 py-2 text-xs">
+                                          <div className="font-semibold text-center">{m.members ?? '—'} / {m.totalMembers ?? '—'}</div>
+                                          {m.memberNames?.length > 0 && (
+                                            <span className="block text-[10px] text-surface-400 font-normal max-w-[120px] truncate" title={`Present: ${m.memberNames.filter(Boolean).join(', ')}`}>
+                                              Pres: {m.memberNames.filter(Boolean).join(', ')}
+                                            </span>
+                                          )}
+                                          {m.totalMemberNames?.length > 0 && (
+                                            <span className="block text-[10px] text-surface-400 font-normal max-w-[120px] truncate" title={`All: ${m.totalMemberNames.filter(Boolean).join(', ')}`}>
+                                              All: {m.totalMemberNames.filter(Boolean).join(', ')}
+                                            </span>
+                                          )}
+                                        </td>
+                                        <td className="px-3 py-2 text-xs text-center font-semibold">{m.sessionsDone}</td>
+                                        <td className="px-3 py-2 text-xs text-center">{m.totalGoal}</td>
+                                        <td className="px-3 py-2">
+                                          <div className="flex gap-1">
+                                            <button
+                                              id={`edit-m-${m._id}`}
+                                              onClick={() => setMeetingModal({ team, meeting: m })}
+                                              className="btn-ghost text-xs px-2 py-0.5"
+                                            >
+                                              Edit
+                                            </button>
+                                            <button
+                                              id={`del-m-${m._id}`}
+                                              onClick={() => deleteMeeting(team._id, m._id)}
+                                              className="text-xs text-red-600 hover:text-red-800 px-2 py-0.5"
+                                            >
+                                              Del
+                                            </button>
+                                          </div>
+                                        </td>
+                                      </tr>
+                                    ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
-                  )}
+                  ))}
                 </div>
-              ))}
+              )}
             </div>
-          )}
-        </div>
-      </>
-    )}
+          </>
+        )}
       </main>
 
       {/* Modals */}

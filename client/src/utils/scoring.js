@@ -16,44 +16,46 @@ export function getLatestMeeting(team) {
  * Score a single team's latest meeting against the active constraints.
  * Returns { score, color, failedConstraints }
  */
-export function scoreTeam(meeting, constraints = {}) {
+export function scoreTeam(meeting, constraints) {
   if (!meeting) {
     return { score: 5, color: 'red', failedConstraints: ['No meeting data'] };
   }
 
-  // Fallback default constraints since administration is removed
-  const activeConstraints = {
-    tmRequired: { enabled: true },
-    dmRequired: { enabled: true },
-    admRequired: { enabled: true },
-    ...constraints,
-  };
-
   const failed = [];
-  const { tmRequired, dmRequired, admRequired, minTotalMembers } = activeConstraints;
+  const { minCompletionPct, tmRequired, dmRequired, admRequired, minTotalMembers } = constraints;
 
-  // 1. TM required
+  // 1. Min completion %
+  if (minCompletionPct?.enabled) {
+    const pct = meeting.totalGoal > 0
+      ? (meeting.sessionsDone / meeting.totalGoal) * 100
+      : 0;
+    if (pct < (minCompletionPct.value ?? 30)) {
+      failed.push(`Below ${minCompletionPct.value ?? 30}%`);
+    }
+  }
+
+  // 2. TM required
   if (tmRequired?.enabled) {
     if (meeting.tm !== 'yes') {
       failed.push('TM missing');
     }
   }
 
-  // 2. DM required
+  // 3. DM required
   if (dmRequired?.enabled) {
     if (meeting.dm !== 'yes') {
       failed.push('DM missing');
     }
   }
 
-  // 3. ADM required
+  // 4. ADM required
   if (admRequired?.enabled) {
     if (meeting.adm !== 'yes') {
       failed.push('ADM missing');
     }
   }
 
-  // 4. Min total members
+  // 5. Min total members
   if (minTotalMembers?.enabled) {
     if ((meeting.members ?? 0) < (minTotalMembers.value ?? 5)) {
       failed.push(`< ${minTotalMembers.value} total members`);
