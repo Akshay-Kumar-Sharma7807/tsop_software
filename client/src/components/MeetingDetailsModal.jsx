@@ -1,7 +1,28 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import api from '../api';
+import { evaluateParam, STATUS_STYLES } from '../utils/paramEval';
 
 export default function MeetingDetailsModal({ meeting, teamName, onClose }) {
+  const [allParams, setAllParams] = useState([]);
+
+  useEffect(() => {
+    api.get('/api/parameters').then(({ data }) => setAllParams(data)).catch(() => {});
+  }, []);
+
+  // Close on Escape key
+  useEffect(() => {
+    const h = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', h);
+    return () => window.removeEventListener('keydown', h);
+  }, [onClose]);
+
   if (!meeting) return null;
+
+  // Build map: parameterId → value
+  const paramValueMap = {};
+  (meeting.parameters || []).forEach(({ parameterId, value }) => {
+    paramValueMap[String(parameterId)] = value;
+  });
 
   const getStatusBadge = (val, label, name) => {
     const cls = {
@@ -9,9 +30,7 @@ export default function MeetingDetailsModal({ meeting, teamName, onClose }) {
       no: 'bg-red-100 text-red-800 border-red-200',
       'in progress': 'bg-amber-100 text-amber-800 border-amber-200',
     }[val] || 'bg-red-100 text-red-800 border-red-200';
-
     const icon = { yes: '✓', no: '✗', 'in progress': '~' }[val] || '✗';
-
     return (
       <div className={`p-3 rounded-xl border ${cls} flex flex-col gap-1`}>
         <div className="flex justify-between items-center">
@@ -24,21 +43,22 @@ export default function MeetingDetailsModal({ meeting, teamName, onClose }) {
     );
   };
 
-  // Close on Escape key
-  React.useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
+  // Parameter stats
+  const paramCounts = { empty: 0, red: 0, yellow: 0, green: 0 };
+  allParams.forEach(p => { paramCounts[evaluateParam(p, paramValueMap[String(p._id)])]++; });
+
+  // Group params by category
+  const paramsByCategory = allParams.reduce((acc, p) => {
+    (acc[p.category] = acc[p.category] || []).push(p);
+    return acc;
+  }, {});
 
   return (
-    <div 
+    <div
       className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4 py-6"
       onClick={onClose}
     >
-      <div 
+      <div
         className="card w-full max-w-lg p-6 max-h-[90vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
@@ -48,24 +68,21 @@ export default function MeetingDetailsModal({ meeting, teamName, onClose }) {
             <h2 className="text-lg font-bold text-surface-900">Meeting Details</h2>
             <p className="text-xs text-surface-500 mt-0.5">Team: <strong className="text-surface-700">{teamName}</strong></p>
           </div>
-          <button 
+          <button
             onClick={onClose}
             className="text-surface-400 hover:text-surface-600 text-lg p-1.5 hover:bg-surface-100 rounded-full transition-colors"
-          >
-            ✕
-          </button>
+          >✕</button>
         </div>
 
         {/* Content (Scrollable) */}
         <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-5">
+
           {/* Date & Time */}
           <div className="grid grid-cols-2 gap-4 bg-surface-50 p-3 rounded-xl border border-surface-150">
             <div>
               <span className="block text-[10px] text-surface-500 uppercase tracking-wider font-semibold">Date</span>
               <span className="text-sm font-medium text-surface-800">
-                {new Date(meeting.date).toLocaleDateString('en-IN', {
-                  day: '2-digit', month: 'long', year: 'numeric'
-                })}
+                {new Date(meeting.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })}
               </span>
             </div>
             <div>
@@ -81,63 +98,44 @@ export default function MeetingDetailsModal({ meeting, teamName, onClose }) {
               {getStatusBadge(meeting.tm, 'TM Status', meeting.tmName)}
               {getStatusBadge(meeting.dm, 'DM Status', meeting.dmName)}
               {getStatusBadge(meeting.adm, 'ADM Status', meeting.admName)}
-              <div className={`p-3 rounded-xl border flex flex-col gap-1 ${
-                meeting.tac === 'yes' ? 'bg-green-100 text-green-800 border-green-200' : 'bg-red-100 text-red-800 border-red-200'
-              }`}>
+              <div className={`p-3 rounded-xl border flex flex-col gap-1 ${meeting.tac === 'yes' ? 'bg-green-100 text-green-800 border-green-200' : 'bg-red-100 text-red-800 border-red-200'}`}>
                 <div className="flex justify-between items-center">
                   <span className="font-semibold text-[10px] uppercase tracking-wider">TAC Status</span>
                   <span className="font-bold text-sm">{meeting.tac === 'yes' ? '✓' : '✗'}</span>
                 </div>
                 <div className="text-sm font-semibold">{meeting.tac === 'yes' ? 'Yes' : 'No'}</div>
-                {meeting.tac === 'yes' && meeting.tacName && (
-                  <div className="text-[11px] opacity-80 italic mt-0.5">Name: {meeting.tacName}</div>
-                )}
+                {meeting.tac === 'yes' && meeting.tacName && <div className="text-[11px] opacity-80 italic mt-0.5">Name: {meeting.tacName}</div>}
               </div>
             </div>
           </div>
 
-          {/* Members (Present & Total) */}
+          {/* Members */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Members Present */}
             <div className="bg-surface-50 p-4 rounded-xl border border-surface-200">
               <div className="flex justify-between items-center mb-2">
                 <h4 className="text-xs font-semibold text-surface-600 uppercase tracking-wider">Present</h4>
-                <span className="text-xs bg-surface-200 text-surface-700 px-2 py-0.5 rounded-full font-bold">
-                  {meeting.members ?? 0}
-                </span>
+                <span className="text-xs bg-surface-200 text-surface-700 px-2 py-0.5 rounded-full font-bold">{meeting.members ?? 0}</span>
               </div>
               {meeting.memberNames?.filter(Boolean).length > 0 ? (
                 <div className="flex flex-wrap gap-1 max-h-[120px] overflow-y-auto pr-1">
-                  {meeting.memberNames.filter(Boolean).map((n, idx) => (
-                    <span key={idx} className="text-xs bg-white text-surface-700 border border-surface-200 px-2 py-0.5 rounded-md font-medium">
-                      {n}
-                    </span>
+                  {meeting.memberNames.filter(Boolean).map((n, i) => (
+                    <span key={i} className="text-xs bg-white text-surface-700 border border-surface-200 px-2 py-0.5 rounded-md font-medium">{n}</span>
                   ))}
                 </div>
-              ) : (
-                <span className="text-xs text-surface-400 italic">None logged</span>
-              )}
+              ) : <span className="text-xs text-surface-400 italic">None logged</span>}
             </div>
-
-            {/* Total Team Members */}
             <div className="bg-surface-50 p-4 rounded-xl border border-surface-200">
               <div className="flex justify-between items-center mb-2">
                 <h4 className="text-xs font-semibold text-surface-600 uppercase tracking-wider">Total Team</h4>
-                <span className="text-xs bg-surface-200 text-surface-700 px-2 py-0.5 rounded-full font-bold">
-                  {meeting.totalMembers ?? 0}
-                </span>
+                <span className="text-xs bg-surface-200 text-surface-700 px-2 py-0.5 rounded-full font-bold">{meeting.totalMembers ?? 0}</span>
               </div>
               {meeting.totalMemberNames?.filter(Boolean).length > 0 ? (
                 <div className="flex flex-wrap gap-1 max-h-[120px] overflow-y-auto pr-1">
-                  {meeting.totalMemberNames.filter(Boolean).map((n, idx) => (
-                    <span key={idx} className="text-xs bg-white text-surface-700 border border-surface-200 px-2 py-0.5 rounded-md font-medium">
-                      {n}
-                    </span>
+                  {meeting.totalMemberNames.filter(Boolean).map((n, i) => (
+                    <span key={i} className="text-xs bg-white text-surface-700 border border-surface-200 px-2 py-0.5 rounded-md font-medium">{n}</span>
                   ))}
                 </div>
-              ) : (
-                <span className="text-xs text-surface-400 italic">None logged</span>
-              )}
+              ) : <span className="text-xs text-surface-400 italic">None logged</span>}
             </div>
           </div>
 
@@ -151,7 +149,7 @@ export default function MeetingDetailsModal({ meeting, teamName, onClose }) {
               </div>
               <div className="p-2 bg-white rounded-lg border border-surface-150">
                 <span className="block text-[10px] text-surface-500 uppercase font-semibold">Done</span>
-                <span className="text-sm font-bold text-surface-800 text-green-700">{meeting.sessionsDone ?? '—'}</span>
+                <span className="text-sm font-bold text-green-700">{meeting.sessionsDone ?? '—'}</span>
               </div>
               <div className="p-2 bg-white rounded-lg border border-surface-150">
                 <span className="block text-[10px] text-surface-500 uppercase font-semibold">Feedback</span>
@@ -159,13 +157,49 @@ export default function MeetingDetailsModal({ meeting, teamName, onClose }) {
               </div>
             </div>
           </div>
+
+          {/* Parameters Section */}
+          {allParams.length > 0 && (
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-xs font-semibold text-surface-600 uppercase tracking-wider">Meeting Parameters</h3>
+                <div className="flex gap-1.5 flex-wrap justify-end">
+                  {[['green','Done','bg-green-100 text-green-700'],['yellow','Partial','bg-amber-100 text-amber-700'],['red','Attention','bg-red-100 text-red-700'],['empty','Empty','bg-gray-100 text-gray-500']].map(([k,l,cls]) => (
+                    <span key={k} className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${cls}`}>{l}: {paramCounts[k]}</span>
+                  ))}
+                </div>
+              </div>
+              {Object.entries(paramsByCategory).map(([cat, catParams]) => (
+                <div key={cat} className="mb-3">
+                  <p className="text-[10px] font-bold text-surface-500 uppercase tracking-wider mb-1.5">{cat}</p>
+                  <div className="flex flex-col gap-1">
+                    {catParams.map(p => {
+                      const val = paramValueMap[String(p._id)];
+                      const s = STATUS_STYLES[evaluateParam(p, val)];
+                      const displayVal = (val === null || val === undefined || val === '') ? null : String(val);
+                      return (
+                        <div key={p._id} className={`flex items-start gap-2 px-3 py-2 rounded-lg border ${s.bg} ${s.border}`}>
+                          <div className={`w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0 ${s.dot}`} />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-[11px] font-medium text-surface-700 truncate">{p.name}</span>
+                              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold flex-shrink-0 ${s.badge}`}>{s.label}</span>
+                            </div>
+                            {displayVal && <span className="text-[11px] text-surface-600 break-all">{displayVal}</span>}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Footer */}
         <div className="pt-3 border-t border-surface-200 mt-4 flex justify-end">
-          <button onClick={onClose} className="btn-secondary text-xs px-4 py-2">
-            Close
-          </button>
+          <button onClick={onClose} className="btn-secondary text-xs px-4 py-2">Close</button>
         </div>
       </div>
     </div>

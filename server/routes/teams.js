@@ -68,6 +68,8 @@ router.post('/:id/meetings', async (req, res) => {
     const saved = await team.save();
     res.status(201).json(saved);
   } catch (err) {
+    console.error('POST /api/teams/:id/meetings error:', err);
+    require('fs').writeFileSync('debug_error.txt', err.message + '\n' + JSON.stringify(err.errors || {}));
     res.status(400).json({ message: err.message });
   }
 });
@@ -79,10 +81,14 @@ router.put('/:id/meetings/:meetingId', async (req, res) => {
     if (!team) return res.status(404).json({ message: 'Team not found' });
     const meeting = team.meetings.id(req.params.meetingId);
     if (!meeting) return res.status(404).json({ message: 'Meeting not found' });
-    Object.assign(meeting, req.body);
+    
+    // Safely update subdocument properties including arrays
+    meeting.set(req.body);
+    
     const saved = await team.save();
     res.json(saved);
   } catch (err) {
+    console.error('Error in PUT meeting:', err);
     res.status(400).json({ message: err.message });
   }
 });

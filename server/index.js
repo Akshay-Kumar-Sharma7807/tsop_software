@@ -16,6 +16,7 @@ app.use(express.json());
 // Routes
 app.use('/api/teams', require('./routes/teams'));
 app.use('/api/constraints', require('./routes/constraints'));
+app.use('/api/parameters', require('./routes/parameters'));
 
 // Health check
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));

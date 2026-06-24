@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api';
 import MeetingDetailsModal from '../components/MeetingDetailsModal';
+import ParameterFormSection from '../components/ParameterFormSection';
+import ParameterConfigModal from '../components/ParameterConfigModal';
 
 const ADMIN_PASSWORD = 'adore2024';
 
@@ -159,16 +161,56 @@ function TeamModal({ team, onClose, onSave }) {
 }
 
 // ─── Meeting Form Modal ───────────────────────────────────────────
-function MeetingModal({ meeting, teamName, onClose, onSave }) {
-  const [form, setForm] = useState(
-    meeting ? {
-      ...getFreshMeeting(),
-      ...meeting,
-      memberNames: meeting.memberNames || [],
-      totalMemberNames: meeting.totalMemberNames || [],
-    } : getFreshMeeting()
-  );
+function MeetingModal({ meeting, team, teamName, onClose, onSave }) {
+  // If creating a new meeting, grab the previous meeting for autofill
+  const previousMeeting = !meeting && team?.meetings?.length > 0
+    ? team.meetings[team.meetings.length - 1]
+    : null;
+
+  const [form, setForm] = useState(() => {
+    if (meeting) {
+      return {
+        ...getFreshMeeting(),
+        ...meeting,
+        memberNames: meeting.memberNames || [],
+        totalMemberNames: meeting.totalMemberNames || [],
+      };
+    }
+    // Auto-fill parameters from previous meeting if it's a new meeting
+    const fresh = getFreshMeeting();
+    if (previousMeeting) {
+      return {
+        ...fresh,
+        tm: previousMeeting.tm, tmName: previousMeeting.tmName,
+        dm: previousMeeting.dm, dmName: previousMeeting.dmName,
+        adm: previousMeeting.adm, admName: previousMeeting.admName,
+        tac: previousMeeting.tac, tacName: previousMeeting.tacName,
+        members: previousMeeting.members ?? '', 
+        totalMembers: previousMeeting.totalMembers ?? '',
+        memberNames: previousMeeting.memberNames || [],
+        totalMemberNames: previousMeeting.totalMemberNames || [],
+        totalGoal: previousMeeting.totalGoal ?? '',
+        sessionsDone: previousMeeting.sessionsDone ?? '',
+        centerFeedbackMeetings: previousMeeting.centerFeedbackMeetings ?? '',
+      };
+    }
+    return fresh;
+  });
+
   const [saving, setSaving] = useState(false);
+
+  // paramValues: { [parameterId]: value }
+  const [paramValues, setParamValues] = useState(() => {
+    const map = {};
+    const sourceParams = meeting?.parameters || previousMeeting?.parameters || [];
+    sourceParams.forEach(({ parameterId, value }) => {
+      map[String(parameterId)] = value;
+    });
+    return map;
+  });
+  const handleParamChange = useCallback((id, val) => {
+    setParamValues(prev => ({ ...prev, [id]: val }));
+  }, []);
 
   const f = (key) => (e) => setForm({ ...form, [key]: e.target.value });
 
@@ -202,13 +244,18 @@ function MeetingModal({ meeting, teamName, onClose, onSave }) {
     e.preventDefault();
     setSaving(true);
     try {
+      // Convert paramValues map → array for MongoDB
+      const parameters = Object.entries(paramValues)
+        .filter(([, v]) => v !== '' && v !== null && v !== undefined)
+        .map(([parameterId, value]) => ({ parameterId, value }));
       await onSave({
         ...form,
-        members: Number(form.members),
-        totalMembers: Number(form.totalMembers),
-        totalGoal: Number(form.totalGoal),
-        sessionsDone: Number(form.sessionsDone),
-        centerFeedbackMeetings: Number(form.centerFeedbackMeetings),
+        members: form.members ? Number(form.members) : 0,
+        totalMembers: form.totalMembers ? Number(form.totalMembers) : 0,
+        totalGoal: form.totalGoal ? Number(form.totalGoal) : 0,
+        sessionsDone: form.sessionsDone ? Number(form.sessionsDone) : 0,
+        centerFeedbackMeetings: form.centerFeedbackMeetings ? Number(form.centerFeedbackMeetings) : 0,
+        parameters,
       });
       onClose();
     } finally {
@@ -341,6 +388,11 @@ function MeetingModal({ meeting, teamName, onClose, onSave }) {
             <Field id="m-cfm" label="Center Feedback Meetings" type="number" min={0} value={form.centerFeedbackMeetings} onChange={f('centerFeedbackMeetings')} />
           </div>
 
+          {/* ── Global Parameters ── */}
+          <div className="border-t border-surface-200 pt-4">
+            <ParameterFormSection values={paramValues} onChange={handleParamChange} />
+          </div>
+
           </div>
           <div className="flex gap-2 pt-3 border-t border-surface-150">
             <button type="button" onClick={onClose} className="btn-secondary flex-1">Cancel</button>
@@ -360,10 +412,18 @@ export default function AdminPanel() {
   const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expandedTeam, setExpandedTeam] = useState(null);
+  const [activeTab, setActiveTab] = useState('teams'); // 'teams' | 'parameters'
+
+  // Parameters state
+  const [params, setParams] = useState([]);
+  const [paramsLoading, setParamsLoading] = useState(false);
+  const [paramModal, setParamModal] = useState(null); // null | 'add' | param object
+  const [paramSearch, setParamSearch] = useState('');
+  const [paramCategoryFilter, setParamCategoryFilter] = useState('All');
 
   // Modals
-  const [teamModal, setTeamModal] = useState(null); // null | 'add' | team object
-  const [meetingModal, setMeetingModal] = useState(null); // null | { team, meeting? }
+  const [teamModal, setTeamModal] = useState(null);
+  const [meetingModal, setMeetingModal] = useState(null);
   const [selectedDetails, setSelectedDetails] = useState(null);
 
   const fetchTeams = async () => {
@@ -414,7 +474,51 @@ export default function AdminPanel() {
     fetchTeams();
   };
 
+  // ── Parameter CRUD ──
+  const fetchParams = async () => {
+    setParamsLoading(true);
+    try {
+      const { data } = await api.get('/api/parameters');
+      setParams(data);
+    } catch (err) { console.error(err); }
+    finally { setParamsLoading(false); }
+  };
+
+  useEffect(() => {
+    if (unlocked && activeTab === 'parameters') fetchParams();
+  }, [unlocked, activeTab]);
+
+  const saveParam = async (form) => {
+    if (paramModal && paramModal._id) {
+      await api.put(`/api/parameters/${paramModal._id}`, form);
+    } else {
+      await api.post('/api/parameters', form);
+    }
+    fetchParams();
+  };
+
+  const toggleParam = async (p) => {
+    await api.put(`/api/parameters/${p._id}`, { enabled: !p.enabled });
+    fetchParams();
+  };
+
+  const deleteParam = async (id) => {
+    if (!confirm('Delete this parameter? This cannot be undone.')) return;
+    await api.delete(`/api/parameters/${id}`);
+    fetchParams();
+  };
+
   if (!unlocked) return <PasswordGate onUnlock={() => setUnlocked(true)} />;
+
+  // ── Parameters tab filtered list ──
+  const categories = ['All', ...new Set(params.map(p => p.category))];
+  const filteredParams = params.filter(p => {
+    const matchCat = paramCategoryFilter === 'All' || p.category === paramCategoryFilter;
+    const matchSearch = !paramSearch.trim() || p.name.toLowerCase().includes(paramSearch.toLowerCase());
+    return matchCat && matchSearch;
+  });
+
+
 
   return (
     <div className="min-h-screen bg-surface-50">
@@ -435,9 +539,110 @@ export default function AdminPanel() {
       </header>
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 flex flex-col gap-6">
-        <h1 className="text-2xl font-bold text-surface-900">Admin Panel</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-surface-900">Admin Panel</h1>
+        </div>
 
-        {/* Teams Section */}
+        {/* Tab bar */}
+        <div className="flex gap-1 p-1 bg-surface-100 rounded-xl w-fit">
+          {[['teams','🏃 Teams'],['parameters','⚙️ Parameters']].map(([key, label]) => (
+            <button
+              key={key}
+              onClick={() => setActiveTab(key)}
+              className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${
+                activeTab === key ? 'bg-white text-surface-900 shadow-sm' : 'text-surface-500 hover:text-surface-700'
+              }`}
+            >{label}</button>
+          ))}
+        </div>
+
+        {/* ══ PARAMETERS TAB ══ */}
+        {activeTab === 'parameters' && (
+          <div className="card p-6 flex flex-col gap-4">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-surface-900">Global Parameters ({params.length})</h2>
+                <p className="text-xs text-surface-500 mt-0.5">Configure parameters that appear in every meeting form</p>
+              </div>
+              <button id="add-param-btn" onClick={() => setParamModal('add')} className="btn-primary text-sm">+ Add Parameter</button>
+            </div>
+
+            {/* Filters */}
+            <div className="flex flex-col sm:flex-row gap-2">
+              <input
+                type="text"
+                value={paramSearch}
+                onChange={e => setParamSearch(e.target.value)}
+                placeholder="Search parameters…"
+                className="input flex-1 text-sm"
+              />
+              <select
+                value={paramCategoryFilter}
+                onChange={e => setParamCategoryFilter(e.target.value)}
+                className="input text-sm w-full sm:w-48"
+              >
+                {categories.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+
+            {/* Stats */}
+            <div className="flex gap-3 flex-wrap">
+              {[
+                { label: 'Total', val: params.length, cls: 'bg-surface-100 text-surface-700' },
+                { label: 'Enabled', val: params.filter(p=>p.enabled).length, cls: 'bg-green-100 text-green-700' },
+                { label: 'Disabled', val: params.filter(p=>!p.enabled).length, cls: 'bg-red-100 text-red-700' },
+              ].map(({ label, val, cls }) => (
+                <span key={label} className={`text-xs px-3 py-1 rounded-full font-semibold ${cls}`}>{label}: {val}</span>
+              ))}
+            </div>
+
+            {/* Parameter list */}
+            {paramsLoading ? (
+              <div className="flex justify-center py-8"><div className="animate-spin w-6 h-6 border-4 border-surface-200 border-t-surface-700 rounded-full"/></div>
+            ) : filteredParams.length === 0 ? (
+              <p className="text-sm text-surface-400 text-center py-8">No parameters found. {params.length === 0 ? 'Run the seed script to add default parameters.' : 'Try a different filter.'}</p>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {filteredParams.map(p => (
+                  <div key={p._id} className={`flex items-center gap-3 px-4 py-3 rounded-xl border transition-all ${p.enabled ? 'bg-white border-surface-200' : 'bg-surface-50 border-surface-150 opacity-60'}`}>
+                    <div className={`w-2 h-2 rounded-full flex-shrink-0 ${p.enabled ? 'bg-green-500' : 'bg-surface-300'}`}/>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold text-surface-800 truncate">{p.name}</span>
+                        {p.required && <span className="text-[10px] text-red-600 font-bold">*</span>}
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
+                          p.dataType === 'yesno' ? 'bg-blue-100 text-blue-700' :
+                          p.dataType === 'number' ? 'bg-purple-100 text-purple-700' :
+                          p.dataType === 'url' ? 'bg-amber-100 text-amber-700' :
+                          'bg-surface-100 text-surface-600'
+                        }`}>{p.dataType}</span>
+                      </div>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-[10px] text-surface-400">{p.category}</span>
+                        {p.hint && <span className="text-[10px] text-surface-400 italic truncate max-w-[200px]">— {p.hint}</span>}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      <button
+                        onClick={() => toggleParam(p)}
+                        className={`text-xs px-2.5 py-1 rounded-lg font-semibold border transition-all ${
+                          p.enabled ? 'border-green-200 bg-green-50 text-green-700 hover:bg-green-100' : 'border-surface-200 bg-white text-surface-500 hover:bg-surface-100'
+                        }`}
+                      >{p.enabled ? 'ON' : 'OFF'}</button>
+                      <button id={`edit-param-${p._id}`} onClick={() => setParamModal(p)} className="btn-ghost text-xs px-2 py-1">Edit</button>
+                      <button id={`del-param-${p._id}`} onClick={() => deleteParam(p._id)} className="text-xs text-red-500 hover:text-red-700 px-2 py-1">Del</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ══ TEAMS TAB ══ */}
+        {activeTab === 'teams' && (
+        <>{/* Teams Section */}
         <div className="card p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-bold text-surface-900">Teams ({teams.length})</h2>
@@ -611,6 +816,8 @@ export default function AdminPanel() {
             </div>
           )}
         </div>
+      </>
+    )}
       </main>
 
       {/* Modals */}
@@ -635,6 +842,13 @@ export default function AdminPanel() {
           meeting={selectedDetails.meeting}
           teamName={selectedDetails.teamName}
           onClose={() => setSelectedDetails(null)}
+        />
+      )}
+      {paramModal && (
+        <ParameterConfigModal
+          param={paramModal === 'add' ? null : paramModal}
+          onClose={() => setParamModal(null)}
+          onSave={saveParam}
         />
       )}
     </div>

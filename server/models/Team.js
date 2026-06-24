@@ -1,5 +1,11 @@
 const mongoose = require('mongoose');
 
+// Each meeting stores parameter values as { parameterId, value }
+const paramValueSchema = new mongoose.Schema({
+  parameterId: { type: mongoose.Schema.Types.ObjectId, ref: 'Parameter', required: true },
+  value: { type: mongoose.Schema.Types.Mixed, default: null },
+}, { _id: false });
+
 const meetingSchema = new mongoose.Schema({
   date: { type: String, required: true },
   time: { type: String, default: '', trim: true },
@@ -18,6 +24,8 @@ const meetingSchema = new mongoose.Schema({
   totalGoal: { type: Number, required: true },
   sessionsDone: { type: Number, default: 0 },
   centerFeedbackMeetings: { type: Number, default: 0 },
+  // Global parameters filled during this meeting
+  parameters: { type: [paramValueSchema], default: [] },
 });
 
 const teamSchema = new mongoose.Schema(
