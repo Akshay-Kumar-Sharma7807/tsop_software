@@ -159,7 +159,7 @@ function TeamModal({ team, onClose, onSave }) {
 }
 
 // ─── Meeting Form Modal ───────────────────────────────────────────
-function MeetingModal({ meeting, teamName, onClose, onSave }) {
+export function MeetingModal({ meeting, teamName, onClose, onSave }) {
   const [form, setForm] = useState(
     meeting ? {
       ...getFreshMeeting(),
@@ -461,7 +461,12 @@ export default function AdminPanel() {
                   {/* Team Row */}
                   <div className="flex items-center justify-between px-4 py-3 bg-surface-50">
                     <div>
-                      <span className="font-semibold text-surface-900">{team.name}</span>
+                        <Link
+                            to={`/admin/teams/${team._id}`}
+                            className="font-semibold text-surface-900 hover:underline"
+                        >
+                            {team.name}
+                        </Link>
                       {team.domain && (
                         <span className="text-xs bg-surface-100 text-surface-600 border border-surface-200 px-2 py-0.5 rounded-full ml-2">
                           {team.domain}
