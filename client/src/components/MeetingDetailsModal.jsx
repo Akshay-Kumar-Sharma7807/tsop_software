@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '../api';
 import { evaluateParam, STATUS_STYLES } from '../utils/paramEval';
 
-export default function MeetingDetailsModal({ meeting, teamName, onClose }) {
+export default function MeetingDetailsModal({ meeting, teamName, team, onClose }) {
   const [allParams, setAllParams] = useState([]);
 
   useEffect(() => {
@@ -18,10 +18,10 @@ export default function MeetingDetailsModal({ meeting, teamName, onClose }) {
 
   if (!meeting) return null;
 
-  // Build map: parameterId → value
+  // Build map: parameterId → value object
   const paramValueMap = {};
-  (meeting.parameters || []).forEach(({ parameterId, value }) => {
-    paramValueMap[String(parameterId)] = value;
+  (meeting.parameters || []).forEach(({ parameterId, value, status }) => {
+    paramValueMap[String(parameterId)] = { value, status: status || 'empty' };
   });
 
   const getStatusBadge = (val, label, name) => {
@@ -47,8 +47,19 @@ export default function MeetingDetailsModal({ meeting, teamName, onClose }) {
   const paramCounts = { empty: 0, red: 0, yellow: 0, green: 0 };
   allParams.forEach(p => { paramCounts[evaluateParam(p, paramValueMap[String(p._id)])]++; });
 
+  // Filter params by target domains/teams or if it's already saved for this meeting
+  const activeParams = allParams.filter(p => {
+    if (paramValueMap[String(p._id)]) return true;
+    if (!team) return true;
+    const isGlobal = (!p.teams || p.teams.length === 0) && (!p.domains || p.domains.length === 0);
+    if (isGlobal) return true;
+    if (p.teams && p.teams.includes(team._id)) return true;
+    if (team.domain && p.domains && p.domains.includes(team.domain)) return true;
+    return false;
+  });
+
   // Group params by category
-  const paramsByCategory = allParams.reduce((acc, p) => {
+  const paramsByCategory = activeParams.reduce((acc, p) => {
     (acc[p.category] = acc[p.category] || []).push(p);
     return acc;
   }, {});
@@ -176,7 +187,7 @@ export default function MeetingDetailsModal({ meeting, teamName, onClose }) {
                     {catParams.map(p => {
                       const val = paramValueMap[String(p._id)];
                       const s = STATUS_STYLES[evaluateParam(p, val)];
-                      const displayVal = (val === null || val === undefined || val === '') ? null : String(val);
+                      const displayVal = (val?.value === null || val?.value === undefined || val?.value === '') ? null : String(val.value);
                       return (
                         <div key={p._id} className={`flex items-start gap-2 px-3 py-2 rounded-lg border ${s.bg} ${s.border}`}>
                           <div className={`w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0 ${s.dot}`} />

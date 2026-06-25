@@ -2,56 +2,15 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import api from '../api';
 import { evaluateParam, STATUS_ORDER, STATUS_STYLES } from '../utils/paramEval';
 
-/* ── Input renderer per data type ─────────────────────────────── */
-function ParamInput({ param, value, onChange }) {
-  const cls = 'w-full border border-surface-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-surface-400 bg-white';
-  switch (param.dataType) {
-    case 'yesno':
-      return (
-        <select value={value ?? ''} onChange={e => onChange(e.target.value)} className={cls}>
-          <option value="">— Select —</option>
-          <option value="yes">Yes</option>
-          <option value="no">No</option>
-          <option value="in progress">In Progress</option>
-        </select>
-      );
-    case 'number':
-      return (
-        <input
-          type="number"
-          value={value ?? ''}
-          onChange={e => onChange(e.target.value)}
-          placeholder="Enter number…"
-          className={cls}
-        />
-      );
-    case 'url':
-      return (
-        <input
-          type="url"
-          value={value ?? ''}
-          onChange={e => onChange(e.target.value)}
-          placeholder="https://…"
-          className={cls}
-        />
-      );
-    default:
-      return (
-        <textarea
-          value={value ?? ''}
-          onChange={e => onChange(e.target.value)}
-          placeholder="Enter value…"
-          rows={2}
-          className={`${cls} resize-none`}
-        />
-      );
-  }
-}
 
 /* ── Single parameter card ─────────────────────────────────────── */
-function ParamCard({ param, value, onChange }) {
-  const status = evaluateParam(param, value);
+function ParamCard({ param, valueObj, onChange }) {
+  const status = evaluateParam(param, valueObj);
+  const value = valueObj?.value ?? '';
   const s = STATUS_STYLES[status];
+
+  const handleStatusChange = (e) => onChange({ value, status: e.target.value });
+  const handleValueChange = (val) => onChange({ value: val, status });
 
   return (
     <div className={`rounded-xl border p-3 transition-all duration-300 ${s.bg} ${s.border}`}>
@@ -73,15 +32,29 @@ function ParamCard({ param, value, onChange }) {
               <span className="text-[10px] text-surface-400" title={param.hint}>ℹ</span>
             )}
           </div>
-          {/* Condition hint for numbers */}
-          {param.dataType === 'number' && (param.redMax != null || param.yellowMax != null) && (
-            <div className="flex gap-2 mb-1.5 text-[10px]">
-              {param.redMax    != null && <span className="text-red-500">≤{param.redMax}=red</span>}
-              {param.yellowMax != null && <span className="text-amber-500">≤{param.yellowMax}=yellow</span>}
-              <span className="text-green-600">higher=green</span>
+          <div className="flex gap-2 items-start">
+            <div className="flex-1">
+              <textarea
+                value={value ?? ''}
+                onChange={e => handleValueChange(e.target.value)}
+                placeholder="Enter value…"
+                rows={2}
+                className="w-full border border-surface-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-surface-400 bg-white resize-none"
+              />
             </div>
-          )}
-          <ParamInput param={param} value={value} onChange={onChange} />
+            <div className="w-32 flex-shrink-0">
+              <select 
+                value={status} 
+                onChange={handleStatusChange}
+                className="w-full border border-surface-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-surface-400 bg-white"
+              >
+                <option value="empty">Empty</option>
+                <option value="green">Done (Green)</option>
+                <option value="yellow">Partial (Yellow)</option>
+                <option value="red">Attention (Red)</option>
+              </select>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -89,7 +62,7 @@ function ParamCard({ param, value, onChange }) {
 }
 
 /* ── Main section ──────────────────────────────────────────────── */
-export default function ParameterFormSection({ values = {}, onChange }) {
+export default function ParameterFormSection({ values = {}, onChange, team }) {
   const [params, setParams] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -114,9 +87,20 @@ export default function ParameterFormSection({ values = {}, onChange }) {
     onChange(id, val);
   }, [onChange]);
 
+  /* Filter parameters by target domains and target teams */
+  const activeParams = useMemo(() => {
+    return params.filter(p => {
+      const isGlobal = (!p.teams || p.teams.length === 0) && (!p.domains || p.domains.length === 0);
+      if (isGlobal) return true;
+      if (team && p.teams && p.teams.includes(team._id)) return true;
+      if (team && team.domain && p.domains && p.domains.includes(team.domain)) return true;
+      return false;
+    });
+  }, [params, team]);
+
   /* Sort: empty→red→yellow→green, then by order */
   const sorted = useMemo(() => {
-    let list = [...params];
+    let list = [...activeParams];
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter(p =>
@@ -134,7 +118,7 @@ export default function ParameterFormSection({ values = {}, onChange }) {
       if (sa !== sb) return sa - sb;
       return (a.order ?? 0) - (b.order ?? 0);
     });
-  }, [params, values, search, filterStatus]);
+  }, [activeParams, values, search, filterStatus]);
 
   if (loading) {
     return (
@@ -144,7 +128,7 @@ export default function ParameterFormSection({ values = {}, onChange }) {
       </div>
     );
   }
-  if (!params || params.length === 0) {
+  if (!activeParams || activeParams.length === 0) {
     return (
       <div className="text-center py-4 text-sm text-surface-500 border border-dashed border-surface-300 rounded-lg bg-surface-50">
         <p>No parameters found.</p>
@@ -154,11 +138,11 @@ export default function ParameterFormSection({ values = {}, onChange }) {
   }
 
   /* Stats */
-  const counts = params.reduce((acc, p) => {
+  const counts = activeParams.reduce((acc, p) => {
     acc[evaluateParam(p, values[p._id])]++;
     return acc;
   }, { empty: 0, red: 0, yellow: 0, green: 0 });
-  const greenPct = Math.round((counts.green / params.length) * 100);
+  const greenPct = Math.round((counts.green / activeParams.length) * 100);
 
   return (
     <div className="flex flex-col gap-3">
@@ -169,7 +153,7 @@ export default function ParameterFormSection({ values = {}, onChange }) {
           <p className="text-[10px] text-surface-500 mt-0.5">Fill all fields — done items move to the bottom automatically</p>
         </div>
         <div className="text-right">
-          <div className="text-xs font-bold text-surface-700">{counts.green}/{params.length}</div>
+          <div className="text-xs font-bold text-surface-700">{counts.green}/{activeParams.length}</div>
           <div className="text-[10px] text-surface-400">completed</div>
         </div>
       </div>
@@ -193,7 +177,7 @@ export default function ParameterFormSection({ values = {}, onChange }) {
       {/* ── Status chips ── */}
       <div className="flex flex-wrap gap-1.5">
         {[
-          { key: 'all',    label: `All (${params.length})`,      cls: 'bg-surface-100 text-surface-600' },
+          { key: 'all',    label: `All (${activeParams.length})`,      cls: 'bg-surface-100 text-surface-600' },
           { key: 'empty',  label: `Empty (${counts.empty})`,     cls: 'bg-gray-100 text-gray-600' },
           { key: 'red',    label: `Attention (${counts.red})`,   cls: 'bg-red-100 text-red-600' },
           { key: 'yellow', label: `Partial (${counts.yellow})`,  cls: 'bg-amber-100 text-amber-600' },
@@ -230,7 +214,7 @@ export default function ParameterFormSection({ values = {}, onChange }) {
             <ParamCard
               key={p._id}
               param={p}
-              value={values[p._id] ?? ''}
+              valueObj={values[p._id]}
               onChange={val => handleChange(p._id, val)}
             />
           ))

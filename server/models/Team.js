@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 const paramValueSchema = new mongoose.Schema({
   parameterId: { type: mongoose.Schema.Types.ObjectId, ref: 'Parameter', required: true },
   value: { type: mongoose.Schema.Types.Mixed, default: null },
+  status: { type: String, enum: ['empty', 'red', 'yellow', 'green'], default: 'empty' },
 }, { _id: false });
 
 const meetingSchema = new mongoose.Schema({

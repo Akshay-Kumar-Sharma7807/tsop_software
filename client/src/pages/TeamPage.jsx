@@ -186,7 +186,7 @@ export default function TeamPage() {
                             {meetings.map((m) => (
                                 <div
                                     key={m._id}
-                                    onClick={() => setSelectedDetails({ meeting: m, teamName: team.name })}
+                                    onClick={() => setSelectedDetails({ meeting: m, teamName: team.name, team })}
                                     className="border border-surface-200 rounded-xl p-4 hover:bg-surface-50 transition-colors cursor-pointer"
                                 >
                                     {/* Top row: date + time + role badges */}
@@ -265,6 +265,7 @@ export default function TeamPage() {
                 <MeetingDetailsModal
                     meeting={selectedDetails.meeting}
                     teamName={selectedDetails.teamName}
+                    team={selectedDetails.team}
                     onClose={() => setSelectedDetails(null)}
                 />
             )}
