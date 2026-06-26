@@ -379,7 +379,11 @@ export default function TeamDetailPage() {
 
                 {/* Full Meeting History */}
                 <div className="bg-white rounded-xl border border-surface-200 p-5 shadow-sm">
-                    <MeetingHistory meetings={team.meetings} teamName={team.name} />
+                    <MeetingHistory
+                        meetings={team.meetings}
+                        teamName={team.name}
+                        teamId={teamId} /* 👈 Pass the hook param or team._id here */
+                    />
                 </div>
 
             </main>
