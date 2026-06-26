@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import MeetingHistory from './MeetingHistory';
+import { Link } from 'react-router-dom';
 
 const COLOR_STYLES = {
   red: {
@@ -65,7 +66,13 @@ export default function TeamCard({ team }) {
         {/* Team name + TAC + Domain */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-semibold text-surface-900 text-sm">{team.name}</span>
+              <Link
+                  to={`/teams/${team._id}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="font-semibold text-surface-900 text-sm hover:underline hover:text-blue-700"
+              >
+                  {team.name}
+              </Link>
             {latest?.tac === 'yes' && latest?.tacName && (
               <span className="text-xs text-surface-400">TAC: {latest.tacName}</span>
             )}
