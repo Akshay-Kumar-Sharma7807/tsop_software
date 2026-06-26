@@ -6,17 +6,11 @@ const CATEGORIES = [
   'Team Culture', 'Session Quality', 'Center Feedback', 'General',
 ];
 
-const DATA_TYPES = [
-  { value: 'yesno',  label: 'Yes / No',  desc: 'Dropdown: Yes, No, In Progress' },
-  { value: 'number', label: 'Number',    desc: 'Numeric input with custom thresholds' },
-  { value: 'text',   label: 'Text',      desc: 'Free-text / multi-line answer' },
-  { value: 'url',    label: 'URL / Link',desc: 'Web link (validated format)' },
-];
+const DOMAIN_OPTIONS = ['Sunshine', 'HR', 'GM', 'Tech', 'GD', 'SMM'];
 
 const EMPTY_FORM = {
-  name: '', category: 'General', dataType: 'text', enabled: true, required: false,
-  hint: '', yesIsGreen: true, allowInProgress: true,
-  redMax: '', yellowMax: '', filledIsGreen: true,
+  name: '', category: 'General', enabled: true, required: false,
+  hint: '', domains: [], teams: []
 };
 
 function Label({ children }) {
@@ -50,14 +44,12 @@ function Toggle({ label, checked, onChange, description }) {
   );
 }
 
-export default function ParameterConfigModal({ param, onClose, onSave }) {
+export default function ParameterConfigModal({ param, teams = [], onClose, onSave }) {
   const [form, setForm] = useState(param ? {
     name: param.name ?? '', category: param.category ?? 'General',
-    dataType: param.dataType ?? 'text', enabled: param.enabled ?? true,
+    enabled: param.enabled ?? true,
     required: param.required ?? false, hint: param.hint ?? '',
-    yesIsGreen: param.yesIsGreen ?? true, allowInProgress: param.allowInProgress ?? true,
-    redMax: param.redMax ?? '', yellowMax: param.yellowMax ?? '',
-    filledIsGreen: param.filledIsGreen ?? true,
+    domains: param.domains ?? [], teams: param.teams ?? []
   } : { ...EMPTY_FORM });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -70,9 +62,7 @@ export default function ParameterConfigModal({ param, onClose, onSave }) {
     setSaving(true);
     try {
       const payload = {
-        ...form,
-        redMax:    form.redMax    !== '' ? Number(form.redMax)    : null,
-        yellowMax: form.yellowMax !== '' ? Number(form.yellowMax) : null,
+        ...form
       };
       await onSave(payload);
       onClose();
@@ -117,92 +107,72 @@ export default function ParameterConfigModal({ param, onClose, onSave }) {
             </select>
           </div>
 
-          {/* Data Type */}
+          {/* Target Domains */}
           <div>
-            <Label>Data Type</Label>
-            <div className="grid grid-cols-2 gap-2">
-              {DATA_TYPES.map(dt => (
-                <button
-                  key={dt.value}
-                  type="button"
-                  onClick={() => set('dataType', dt.value)}
-                  className={`text-left p-3 rounded-xl border text-xs transition-all ${
-                    form.dataType === dt.value
-                      ? 'border-surface-800 bg-surface-900 text-white'
-                      : 'border-surface-200 bg-surface-50 text-surface-600 hover:border-surface-400'
-                  }`}
-                >
-                  <div className="font-semibold">{dt.label}</div>
-                  <div className={`mt-0.5 text-[10px] ${form.dataType === dt.value ? 'text-surface-300' : 'text-surface-400'}`}>{dt.desc}</div>
-                </button>
-              ))}
+            <Label>Target Domains (leave empty for all)</Label>
+            <div className="flex flex-col gap-2 mt-1">
+              <select
+                className="w-full border border-surface-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-surface-400 bg-white"
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val && !form.domains.includes(val)) {
+                    set('domains', [...form.domains, val]);
+                  }
+                  e.target.value = "";
+                }}
+              >
+                <option value="">— Add a Domain —</option>
+                {DOMAIN_OPTIONS.filter(d => !form.domains.includes(d)).map(d => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
+              </select>
+              {form.domains.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {form.domains.map(d => (
+                    <span key={d} className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800 flex items-center border border-blue-200">
+                      {d}
+                      <button type="button" onClick={() => set('domains', form.domains.filter(x => x !== d))} className="ml-1.5 text-blue-500 hover:text-blue-900 font-bold">×</button>
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Condition Config — yesno */}
-          {form.dataType === 'yesno' && (
-            <div className="flex flex-col gap-2 p-4 bg-blue-50 border border-blue-100 rounded-xl">
-              <p className="text-xs font-bold text-blue-800 mb-1">Yes/No Conditions</p>
-              <Toggle
-                label="'Yes' answer = Green"
-                checked={form.yesIsGreen}
-                onChange={v => set('yesIsGreen', v)}
-                description="Disable if 'No' should be the target answer"
-              />
-              <Toggle
-                label="Allow 'In Progress' (Yellow)"
-                checked={form.allowInProgress}
-                onChange={v => set('allowInProgress', v)}
-                description="Show 'In Progress' as a valid answer (amber)"
-              />
-            </div>
-          )}
-
-          {/* Condition Config — number */}
-          {form.dataType === 'number' && (
-            <div className="p-4 bg-orange-50 border border-orange-100 rounded-xl">
-              <p className="text-xs font-bold text-orange-800 mb-3">Number Thresholds</p>
-              <p className="text-[10px] text-orange-600 mb-3">
-                ≤ Red Max → 🔴 Red &nbsp;|&nbsp; ≤ Yellow Max → 🟡 Yellow &nbsp;|&nbsp; Above both → 🟢 Green
-              </p>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label>Red Max (≤ this = red)</Label>
-                  <Input
-                    type="number"
-                    value={form.redMax}
-                    onChange={e => set('redMax', e.target.value)}
-                    placeholder="e.g. 3 (leave blank = no threshold)"
-                  />
+          {/* Target Teams */}
+          <div>
+            <Label>Target Teams (leave empty for all)</Label>
+            <div className="flex flex-col gap-2 mt-1">
+              <select
+                className="w-full border border-surface-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-surface-400 bg-white"
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val && !form.teams.includes(val)) {
+                    set('teams', [...form.teams, val]);
+                  }
+                  e.target.value = "";
+                }}
+              >
+                <option value="">— Add a Team —</option>
+                {teams.filter(t => !form.teams.includes(t._id)).map(t => (
+                  <option key={t._id} value={t._id}>{t.name}</option>
+                ))}
+              </select>
+              {form.teams.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {form.teams.map(tid => {
+                    const t = teams.find(x => x._id === tid);
+                    return (
+                      <span key={tid} className="px-2 py-1 text-xs rounded bg-purple-100 text-purple-800 flex items-center border border-purple-200">
+                        {t ? t.name : tid}
+                        <button type="button" onClick={() => set('teams', form.teams.filter(x => x !== tid))} className="ml-1.5 text-purple-500 hover:text-purple-900 font-bold">×</button>
+                      </span>
+                    );
+                  })}
                 </div>
-                <div>
-                  <Label>Yellow Max (≤ this = yellow)</Label>
-                  <Input
-                    type="number"
-                    value={form.yellowMax}
-                    onChange={e => set('yellowMax', e.target.value)}
-                    placeholder="e.g. 7"
-                  />
-                </div>
-              </div>
-              <p className="text-[10px] text-orange-500 mt-2">Leave blank to skip that threshold (e.g. only red/green, no yellow).</p>
+              )}
             </div>
-          )}
-
-          {/* Condition Config — text/url */}
-          {(form.dataType === 'text' || form.dataType === 'url') && (
-            <div className="p-4 bg-green-50 border border-green-100 rounded-xl">
-              <p className="text-xs font-bold text-green-800 mb-2">Text / URL Conditions</p>
-              <Toggle
-                label="Filled = Green (any non-empty value is green)"
-                checked={form.filledIsGreen}
-                onChange={v => set('filledIsGreen', v)}
-                description="If off, filling the field is considered red"
-              />
-            </div>
-          )}
-
-          {/* Hint */}
+          </div>          {/* Hint */}
           <div>
             <Label>Hint / Description (optional)</Label>
             <Input

@@ -7,13 +7,13 @@ const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/tsop';
 
 // Helper builders
 const yn  = (name, category, hint = '', yesIsGreen = true, order) =>
-  ({ name, category, dataType: 'yesno', yesIsGreen, allowInProgress: true, hint, enabled: true, required: false, order });
+  ({ name, category, hint, enabled: true, required: false, order });
 const txt = (name, category, hint = '', order) =>
-  ({ name, category, dataType: 'text', filledIsGreen: true, hint, enabled: true, required: false, order });
+  ({ name, category, hint, enabled: true, required: false, order });
 const url = (name, category, hint = '', order) =>
-  ({ name, category, dataType: 'url', filledIsGreen: true, hint, enabled: true, required: false, order });
+  ({ name, category, hint, enabled: true, required: false, order });
 const num = (name, category, redMax, yellowMax, hint = '', order) =>
-  ({ name, category, dataType: 'number', redMax, yellowMax, hint, enabled: true, required: false, order });
+  ({ name, category, hint, enabled: true, required: false, order });
 
 const PARAMETERS = [
   // ── Meeting Setup ──────────────────────────────────────────────────────────

@@ -2,33 +2,9 @@
  * Evaluate a parameter value against its condition and return a status.
  * @returns {'empty' | 'red' | 'yellow' | 'green'}
  */
-export function evaluateParam(param, value) {
-  const isEmpty = value === null || value === undefined || value === '';
-  if (isEmpty) return 'empty';
-
-  switch (param.dataType) {
-    case 'yesno': {
-      if (value === 'yes')        return param.yesIsGreen !== false ? 'green' : 'red';
-      if (value === 'no')         return param.yesIsGreen !== false ? 'red'   : 'green';
-      if (value === 'in progress') return 'yellow';
-      return 'empty';
-    }
-    case 'number': {
-      const n = Number(value);
-      if (isNaN(n)) return 'empty';
-      if (param.redMax    != null && n <= param.redMax)    return 'red';
-      if (param.yellowMax != null && n <= param.yellowMax) return 'yellow';
-      return 'green';
-    }
-    case 'url':
-    case 'text': {
-      const filled = String(value).trim().length > 0;
-      if (!filled) return 'empty';
-      return param.filledIsGreen !== false ? 'green' : 'red';
-    }
-    default:
-      return value ? 'green' : 'empty';
-  }
+export function evaluateParam(param, valueObj) {
+  if (!valueObj || typeof valueObj !== 'object') return 'empty';
+  return valueObj.status || 'empty';
 }
 
 /** Sort weight: empty/red at top (0,1), yellow in middle (2), green at bottom (3) */

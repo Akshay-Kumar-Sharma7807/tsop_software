@@ -203,8 +203,8 @@ export function MeetingModal({ meeting, team, teamName, onClose, onSave }) {
   const [paramValues, setParamValues] = useState(() => {
     const map = {};
     const sourceParams = meeting?.parameters || previousMeeting?.parameters || [];
-    sourceParams.forEach(({ parameterId, value }) => {
-      map[String(parameterId)] = value;
+    sourceParams.forEach(({ parameterId, value, status }) => {
+      map[String(parameterId)] = { value, status: status || 'empty' };
     });
     return map;
   });
@@ -246,8 +246,8 @@ export function MeetingModal({ meeting, team, teamName, onClose, onSave }) {
     try {
       // Convert paramValues map → array for MongoDB
       const parameters = Object.entries(paramValues)
-        .filter(([, v]) => v !== '' && v !== null && v !== undefined)
-        .map(([parameterId, value]) => ({ parameterId, value }));
+        .filter(([, v]) => v !== '' && v !== null && v !== undefined && v.value !== undefined && v.value !== null)
+        .map(([parameterId, v]) => ({ parameterId, value: v.value, status: v.status || 'empty' }));
       await onSave({
         ...form,
         members: form.members ? Number(form.members) : 0,
@@ -390,7 +390,7 @@ export function MeetingModal({ meeting, team, teamName, onClose, onSave }) {
 
             {/* ── Global Parameters ── */}
             <div className="border-t border-surface-200 pt-4">
-              <ParameterFormSection values={paramValues} onChange={handleParamChange} />
+              <ParameterFormSection values={paramValues} onChange={handleParamChange} team={team} />
             </div>
 
           </div>
@@ -610,11 +610,8 @@ export default function AdminPanel() {
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-semibold text-surface-800 truncate">{p.name}</span>
                         {p.required && <span className="text-[10px] text-red-600 font-bold">*</span>}
-                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${p.dataType === 'yesno' ? 'bg-blue-100 text-blue-700' :
-                            p.dataType === 'number' ? 'bg-purple-100 text-purple-700' :
-                              p.dataType === 'url' ? 'bg-amber-100 text-amber-700' :
-                                'bg-surface-100 text-surface-600'
-                          }`}>{p.dataType}</span>
+                        {p.domains?.length > 0 && <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-blue-100 text-blue-700">D: {p.domains.join(', ')}</span>}
+                        {p.teams?.length > 0 && <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-purple-100 text-purple-700">T: {p.teams.length}</span>}
                       </div>
                       <div className="flex items-center gap-2 mt-0.5">
                         <span className="text-[10px] text-surface-400">{p.category}</span>
@@ -833,12 +830,14 @@ export default function AdminPanel() {
         <MeetingDetailsModal
           meeting={selectedDetails.meeting}
           teamName={selectedDetails.teamName}
+          team={selectedDetails.team}
           onClose={() => setSelectedDetails(null)}
         />
       )}
       {paramModal && (
         <ParameterConfigModal
           param={paramModal === 'add' ? null : paramModal}
+          teams={teams}
           onClose={() => setParamModal(null)}
           onSave={saveParam}
         />
